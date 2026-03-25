@@ -118,6 +118,21 @@ module floatsync::merchant {
         events::emit_merchant_unpaused(object::id(account));
     }
 
+    /// Claim accrued yield. Requires MerchantCap matching this account.
+    /// Resets accrued_yield to 0 and returns the amount claimed.
+    /// Actual coin transfer is handled by the caller (router module).
+    public fun claim_yield(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+    ): u64 {
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        let amount = account.accrued_yield;
+        assert!(amount > 0, EZeroYield);
+        account.accrued_yield = 0;
+        events::emit_yield_claimed(object::id(account), amount);
+        amount
+    }
+
     // ── Package-internal mutators (used by payment module) ──
 
     /// Credit a one-time payment to the merchant ledger.
@@ -134,6 +149,19 @@ module floatsync::merchant {
     /// Decrement active subscription count.
     public(package) fun decrement_subscriptions(account: &mut MerchantAccount) {
         account.active_subscriptions = account.active_subscriptions - 1;
+    }
+
+    /// Credit yield to merchant (called by router when yield is accrued).
+    /// Moves amount from idle_principal to accrued_yield.
+    public(package) fun credit_yield(account: &mut MerchantAccount, amount: u64) {
+        account.idle_principal = account.idle_principal - amount;
+        account.accrued_yield = account.accrued_yield + amount;
+    }
+
+    #[test_only]
+    /// Simulate yield accrual for testing claim_yield.
+    public fun credit_yield_for_testing(account: &mut MerchantAccount, amount: u64) {
+        credit_yield(account, amount);
     }
 
     // ── Getters (for tests and payment module) ──

@@ -129,4 +129,12 @@ module floatsync::events {
     ) {
         event::emit(SubscriptionFunded { merchant_id, payer, funded_amount });
     }
+
+    public fun emit_yield_claimed(merchant_id: ID, amount: u64) {
+        event::emit(YieldClaimed { merchant_id, amount });
+    }
+
+    public fun emit_router_mode_changed(old_mode: u8, new_mode: u8) {
+        event::emit(RouterModeChanged { old_mode, new_mode });
+    }
 }
