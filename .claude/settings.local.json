@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sui:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(ls:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "sui-dev-agents@sui-dev-agents": true,
+    "playwright@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
+  }
+}
