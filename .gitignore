@@ -3,3 +3,11 @@ tasks/lessons.md
 
 # Move build artifacts
 move/floatsync/build/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Claude
+.claude/settings.local.json

@@ -1,0 +1,25 @@
+{
+  "network": "testnet",
+  "deployer": "0x1509b5fdf09296b2cf749a710e36da06f5693ccd5b2144ad643b3a895abcbc4c",
+  "txDigest": "A6Nn4zF2k9nPdFLbgZBtyrPYchsLJxMbau6DpTwZkExR",
+  "epoch": 1049,
+  "gasCost": "71598680 MIST (0.0716 SUI)",
+  "packageId": "0x7d12a373e5802e2036eb80463fee8a6ef3d1f6d2327cc33b1b239fa943165097",
+  "modules": ["brand_usd", "events", "merchant", "payment", "router"],
+  "objects": {
+    "UpgradeCap": "0xe923f05c278c00a26989e7ce3e74996daa2135a208bb0d3a2f00534ec0032602",
+    "AdminCap": "0xfa3886bbd3d0c6b2f4e3571601e2e320c0fd820ac479b37bdf5e542db6c339b0",
+    "TreasuryCap_BRAND_USD": "0x3bdefae779396a4219d6fbe299f100d83c0751aa3e524be685266bfad8bac4e2",
+    "CoinMetadata_BRAND_USD": "0xaa46f1f1773d2b1ed5f037b908a99b53a2adfac719cb133ba52ae6a3ddf75706",
+    "MerchantRegistry": "0xa622b70a160d285f35c280a80c3dd743e1479a51ec66836b55fd238048a50daf",
+    "RouterConfig": "0x43fb2a477f014518304793daae5e7427f248a9e70c31e2d4846abeccf7b31c5e"
+  },
+  "deployedAt": "2026-03-25",
+  "smokeTest": {
+    "registerMerchant": {
+      "MerchantAccount": "0x42f27792733caf4d994ddb40a71edb1fd6f97e7ae6ae982f196f24dcf25562ca",
+      "MerchantCap": "0xd4e632e177847def58e1bc6df0d6768bd74a3ba7bacf0d298c3f7eb30db0bfac",
+      "brandName": "FloatSync Demo Shop"
+    }
+  }
+}

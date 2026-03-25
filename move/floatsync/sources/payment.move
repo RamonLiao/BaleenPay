@@ -1,9 +1,13 @@
 module floatsync::payment {
-    use sui::coin::{Self, Coin};
+    use sui::coin::Coin;
     use sui::balance::Balance;
     use sui::clock::Clock;
     use floatsync::merchant::{Self, MerchantAccount};
     use floatsync::events;
+    use sui::dynamic_field as df;
+    use std::type_name;
+    use std::string::String;
+    use floatsync::merchant::MerchantCap;
 
     // ── Error codes (spec §3.8) ──
     const EPaused: u64 = 2;
@@ -13,6 +17,19 @@ module floatsync::payment {
     const EInsufficientPrepaid: u64 = 13;
     const EZeroPeriod: u64 = 14;
     const EInsufficientBalance: u64 = 15;
+    const EMerchantMismatch: u64 = 16;
+    const EZeroPrepaidPeriods: u64 = 17;
+    const ENotMerchantOwner: u64 = 0;
+    #[error]
+    const EOrderAlreadyPaid: u64 = 18;
+    #[error]
+    const EInvalidOrderId: u64 = 19;
+    #[error]
+    const EExceedsMaxPrepaidPeriods: u64 = 22;
+    #[error]
+    const EOverflow: u64 = 23;
+    const MAX_ORDER_ID_BYTES: u64 = 64;
+    const MAX_PREPAID_PERIODS: u64 = 1000;
 
     // ── Subscription struct ──
 
@@ -26,6 +43,35 @@ module floatsync::payment {
         period_ms: u64,
         next_due: u64,
         balance: Balance<T>,
+    }
+
+    // ── Helpers ──
+
+    fun validate_order_id(order_id: &String) {
+        let bytes = order_id.as_bytes();
+        let len = bytes.length();
+        assert!(len > 0 && len <= MAX_ORDER_ID_BYTES, EInvalidOrderId);
+        let mut i = 0;
+        while (i < len) {
+            let b = bytes[i];
+            assert!(b >= 0x21 && b <= 0x7E, EInvalidOrderId);
+            i = i + 1;
+        };
+    }
+
+    // ── Order ID dedup structs ──
+
+    /// Dynamic field key scoped to payer — prevents front-running/squatting.
+    public struct OrderKey has copy, drop, store {
+        payer: address,
+        order_id: String,
+    }
+
+    /// Stored as dynamic field on MerchantAccount.
+    public struct OrderRecord has store, drop {
+        amount: u64,
+        timestamp_ms: u64,
+        coin_type: String,
     }
 
     // ── One-time payment ──
@@ -58,6 +104,44 @@ module floatsync::payment {
         );
     }
 
+    /// One-time payment with order_id deduplication.
+    /// Order ID scoped to (payer, order_id) — same order_id from different payers are independent.
+    public fun pay_once_v2<T>(
+        account: &mut MerchantAccount,
+        coin: Coin<T>,
+        order_id: String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        validate_order_id(&order_id);
+        let key = OrderKey { payer: ctx.sender(), order_id };
+        assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
+
+        assert!(!merchant::get_paused(account), EPaused);
+        let amount = coin.value();
+        assert!(amount > 0, EZeroAmount);
+
+        merchant::add_payment(account, amount);
+        transfer::public_transfer(coin, merchant::get_owner(account));
+
+        let now = clock.timestamp_ms();
+        df::add(merchant::uid_mut(account), key, OrderRecord {
+            amount,
+            timestamp_ms: now,
+            coin_type: type_name::get<T>().into_string().to_string(),
+        });
+
+        events::emit_payment_received_v2(
+            object::id(account),
+            ctx.sender(),
+            amount,
+            0,
+            now,
+            key.order_id,
+            type_name::get<T>().into_string().to_string(),
+        );
+    }
+
     // ── Subscription functions ──
 
     /// Create a recurring subscription. Locks `amount_per_period * prepaid_periods`
@@ -75,7 +159,7 @@ module floatsync::payment {
         assert!(!merchant::get_paused(account), EPaused);
         assert!(amount_per_period > 0, EZeroAmount);
         assert!(period_ms > 0, EZeroPeriod);
-        assert!(prepaid_periods > 0, EZeroAmount);
+        assert!(prepaid_periods > 0, EZeroPrepaidPeriods);
 
         let total_required = amount_per_period * prepaid_periods;
         assert!(coin.value() >= total_required, EInsufficientPrepaid);
@@ -93,8 +177,7 @@ module floatsync::payment {
 
         // Process first period immediately
         let first_payment = escrow_balance.split(amount_per_period);
-        let first_coin = coin::from_balance(first_payment, ctx);
-        transfer::public_transfer(first_coin, merchant::get_owner(account));
+        transfer::public_transfer(first_payment.into_coin(ctx), merchant::get_owner(account));
         merchant::add_payment(account, amount_per_period);
 
         let now = clock.timestamp_ms();
@@ -134,6 +217,81 @@ module floatsync::payment {
         });
     }
 
+    /// Subscribe with order_id deduplication.
+    #[allow(lint(self_transfer))]
+    public fun subscribe_v2<T>(
+        account: &mut MerchantAccount,
+        mut coin: Coin<T>,
+        amount_per_period: u64,
+        period_ms: u64,
+        prepaid_periods: u64,
+        order_id: String,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        validate_order_id(&order_id);
+        let key = OrderKey { payer: ctx.sender(), order_id };
+        assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
+
+        assert!(!merchant::get_paused(account), EPaused);
+        assert!(amount_per_period > 0, EZeroAmount);
+        assert!(period_ms > 0, EZeroPeriod);
+        assert!(prepaid_periods > 0, EZeroPrepaidPeriods);
+        // Overflow guard: cap prepaid_periods + checked multiplication
+        assert!(prepaid_periods <= MAX_PREPAID_PERIODS, EExceedsMaxPrepaidPeriods);
+        assert!(amount_per_period <= 18_446_744_073_709_551_615 / prepaid_periods, EOverflow);
+
+        let total_required = amount_per_period * prepaid_periods;
+        assert!(coin.value() >= total_required, EInsufficientPrepaid);
+
+        let escrow_coin = coin.split(total_required, ctx);
+        if (coin.value() > 0) {
+            transfer::public_transfer(coin, ctx.sender());
+        } else {
+            coin.destroy_zero();
+        };
+
+        let mut escrow_balance = escrow_coin.into_balance();
+        let first_payment = escrow_balance.split(amount_per_period);
+        transfer::public_transfer(first_payment.into_coin(ctx), merchant::get_owner(account));
+        merchant::add_payment(account, amount_per_period);
+
+        let now = clock.timestamp_ms();
+        let merchant_id = object::id(account);
+
+        df::add(merchant::uid_mut(account), key, OrderRecord {
+            amount: total_required,
+            timestamp_ms: now,
+            coin_type: type_name::get<T>().into_string().to_string(),
+        });
+
+        merchant::increment_subscriptions(account);
+
+        events::emit_payment_received_v2(
+            merchant_id, ctx.sender(), amount_per_period, 1, now,
+            key.order_id, type_name::get<T>().into_string().to_string(),
+        );
+
+        let sub_uid = object::new(ctx);
+        let subscription_id = sub_uid.to_inner();
+
+        // V2 event includes subscription_id
+        events::emit_subscription_created_v2(
+            merchant_id, subscription_id, ctx.sender(),
+            amount_per_period, period_ms, prepaid_periods, key.order_id,
+        );
+
+        transfer::share_object(Subscription<T> {
+            id: sub_uid,
+            merchant_id,
+            payer: ctx.sender(),
+            amount_per_period,
+            period_ms,
+            next_due: now + period_ms,
+            balance: escrow_balance,
+        });
+    }
+
     /// Process a due subscription payment. Permissionless — anyone can call.
     public fun process_subscription<T>(
         account: &mut MerchantAccount,
@@ -141,6 +299,7 @@ module floatsync::payment {
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
+        assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
         assert!(!merchant::get_paused(account), EPaused);
         assert!(clock.timestamp_ms() >= subscription.next_due, ENotDue);
         assert!(
@@ -149,8 +308,7 @@ module floatsync::payment {
         );
 
         let payment = subscription.balance.split(subscription.amount_per_period);
-        let payment_coin = coin::from_balance(payment, ctx);
-        transfer::public_transfer(payment_coin, merchant::get_owner(account));
+        transfer::public_transfer(payment.into_coin(ctx), merchant::get_owner(account));
 
         merchant::add_payment(account, subscription.amount_per_period);
         subscription.next_due = subscription.next_due + subscription.period_ms;
@@ -170,6 +328,7 @@ module floatsync::payment {
         ctx: &mut TxContext,
     ) {
         assert!(ctx.sender() == subscription.payer, ENotPayer);
+        assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
 
         let Subscription {
             id,
@@ -185,8 +344,7 @@ module floatsync::payment {
 
         // Refund remaining balance to payer
         if (refunded_amount > 0) {
-            let refund_coin = coin::from_balance(balance, ctx);
-            transfer::public_transfer(refund_coin, payer);
+            transfer::public_transfer(balance.into_coin(ctx), payer);
         } else {
             balance.destroy_zero();
         };
@@ -199,7 +357,7 @@ module floatsync::payment {
             refunded_amount,
         );
 
-        object::delete(id);
+        id.delete();
     }
 
     /// Add more funds to an existing subscription. Only payer can fund.
@@ -219,6 +377,37 @@ module floatsync::payment {
             subscription.payer,
             funded_amount,
         );
+    }
+
+    // ── Order record management ──
+
+    /// Remove an order record. MerchantCap gated. Emits audit event.
+    /// WARNING: Removing a record allows the same order_id to be reused.
+    public fun remove_order_record(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+        payer: address,
+        order_id: String,
+    ) {
+        assert!(merchant::get_merchant_id(cap) == object::id(account), ENotMerchantOwner);
+        let key = OrderKey { payer, order_id };
+        let _: OrderRecord = df::remove(merchant::uid_mut(account), key);
+
+        events::emit_order_record_removed(
+            object::id(account),
+            payer,
+            key.order_id,
+        );
+    }
+
+    /// Check if an order_id has been paid by a specific payer.
+    public fun has_order_record(
+        account: &MerchantAccount,
+        payer: address,
+        order_id: String,
+    ): bool {
+        let key = OrderKey { payer, order_id };
+        df::exists_(merchant::uid(account), key)
     }
 
     // ── Getters (for tests) ──

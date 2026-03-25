@@ -9,6 +9,8 @@ module floatsync::merchant {
     const EPaused: u64 = 2;               // MerchantAccount.paused == true
     const EAlreadyRegistered: u64 = 6;    // Merchant address already in registry
     const EZeroYield: u64 = 12;           // accrued_yield == 0, nothing to claim
+    const ENoActiveSubscriptions: u64 = 7; // active_subscriptions == 0, cannot decrement
+    const EInsufficientPrincipal: u64 = 8; // idle_principal < amount for credit_yield
 
     // ── Structs ──
 
@@ -118,6 +120,26 @@ module floatsync::merchant {
         events::emit_merchant_unpaused(object::id(account));
     }
 
+    /// Merchant self-pause. Requires MerchantCap matching this account.
+    public fun self_pause(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+    ) {
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        account.paused = true;
+        events::emit_merchant_paused(object::id(account));
+    }
+
+    /// Merchant self-unpause. Requires MerchantCap matching this account.
+    public fun self_unpause(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+    ) {
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        account.paused = false;
+        events::emit_merchant_unpaused(object::id(account));
+    }
+
     /// Claim accrued yield. Requires MerchantCap matching this account.
     /// Resets accrued_yield to 0 and returns the amount claimed.
     /// Actual coin transfer is handled by the caller (router module).
@@ -135,6 +157,10 @@ module floatsync::merchant {
 
     // ── Package-internal mutators (used by payment module) ──
 
+    /// Expose UID for dynamic field access (order_id dedup in payment module).
+    public(package) fun uid(account: &MerchantAccount): &UID { &account.id }
+    public(package) fun uid_mut(account: &mut MerchantAccount): &mut UID { &mut account.id }
+
     /// Credit a one-time payment to the merchant ledger.
     public(package) fun add_payment(account: &mut MerchantAccount, amount: u64) {
         account.total_received = account.total_received + amount;
@@ -148,12 +174,14 @@ module floatsync::merchant {
 
     /// Decrement active subscription count.
     public(package) fun decrement_subscriptions(account: &mut MerchantAccount) {
+        assert!(account.active_subscriptions > 0, ENoActiveSubscriptions);
         account.active_subscriptions = account.active_subscriptions - 1;
     }
 
     /// Credit yield to merchant (called by router when yield is accrued).
     /// Moves amount from idle_principal to accrued_yield.
     public(package) fun credit_yield(account: &mut MerchantAccount, amount: u64) {
+        assert!(account.idle_principal >= amount, EInsufficientPrincipal);
         account.idle_principal = account.idle_principal - amount;
         account.accrued_yield = account.accrued_yield + amount;
     }

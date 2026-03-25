@@ -532,6 +532,127 @@ module floatsync::payment_tests {
         scenario.end();
     }
 
+    // ── Merchant Mismatch Tests ──
+
+    #[test]
+    #[expected_failure(abort_code = payment::EMerchantMismatch)]
+    fun test_process_subscription_wrong_merchant_fails() {
+        let admin = @0xAD;
+        let merchant_a = @0xBB;
+        let merchant_b = @0xDD;
+        let payer = @0xCC;
+        let mut scenario = test_scenario::begin(admin);
+
+        // Init + register merchant A
+        setup_merchant(&mut scenario, admin, merchant_a);
+
+        // Capture merchant A's ID
+        scenario.next_tx(payer);
+        let account_a_obj = scenario.take_shared<merchant::MerchantAccount>();
+        let id_a = object::id(&account_a_obj);
+        test_scenario::return_shared(account_a_obj);
+
+        // Register merchant B
+        scenario.next_tx(merchant_b);
+        let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
+        merchant::register_merchant(&mut registry, b"ShopB".to_string(), scenario.ctx());
+        test_scenario::return_shared(registry);
+
+        // Capture merchant B's ID
+        scenario.next_tx(payer);
+        let account_a_tmp = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_a);
+        let account_b_obj = scenario.take_shared<merchant::MerchantAccount>();
+        let id_b = object::id(&account_b_obj);
+        test_scenario::return_shared(account_a_tmp);
+        test_scenario::return_shared(account_b_obj);
+
+        // Payer subscribes to merchant A
+        scenario.next_tx(payer);
+        let mut account_a = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_a);
+        let coin = coin::mint_for_testing<TEST_USDC>(20_000_000, scenario.ctx());
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        clock::set_for_testing(&mut clock, 1000);
+
+        payment::subscribe(
+            &mut account_a, coin,
+            10_000_000, 86400_000, 2,
+            &clock, scenario.ctx(),
+        );
+        test_scenario::return_shared(account_a);
+        clock::destroy_for_testing(clock);
+
+        // Process subscription against merchant B → should abort EMerchantMismatch
+        scenario.next_tx(payer);
+        let mut account_b = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_b);
+        let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        clock::set_for_testing(&mut clock, 1000 + 86400_000);
+
+        payment::process_subscription(&mut account_b, &mut sub, &clock, scenario.ctx());
+
+        test_scenario::return_shared(sub);
+        test_scenario::return_shared(account_b);
+        clock::destroy_for_testing(clock);
+        scenario.end();
+    }
+
+    #[test]
+    #[expected_failure(abort_code = payment::EMerchantMismatch)]
+    fun test_cancel_subscription_wrong_merchant_fails() {
+        let admin = @0xAD;
+        let merchant_a = @0xBB;
+        let merchant_b = @0xDD;
+        let payer = @0xCC;
+        let mut scenario = test_scenario::begin(admin);
+
+        // Init + register merchant A
+        setup_merchant(&mut scenario, admin, merchant_a);
+
+        // Capture merchant A's ID
+        scenario.next_tx(payer);
+        let account_a_obj = scenario.take_shared<merchant::MerchantAccount>();
+        let id_a = object::id(&account_a_obj);
+        test_scenario::return_shared(account_a_obj);
+
+        // Register merchant B
+        scenario.next_tx(merchant_b);
+        let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
+        merchant::register_merchant(&mut registry, b"ShopB".to_string(), scenario.ctx());
+        test_scenario::return_shared(registry);
+
+        // Capture merchant B's ID
+        scenario.next_tx(payer);
+        let account_a_tmp = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_a);
+        let account_b_obj = scenario.take_shared<merchant::MerchantAccount>();
+        let id_b = object::id(&account_b_obj);
+        test_scenario::return_shared(account_a_tmp);
+        test_scenario::return_shared(account_b_obj);
+
+        // Payer subscribes to merchant A
+        scenario.next_tx(payer);
+        let mut account_a = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_a);
+        let coin = coin::mint_for_testing<TEST_USDC>(20_000_000, scenario.ctx());
+        let clock = clock::create_for_testing(scenario.ctx());
+
+        payment::subscribe(
+            &mut account_a, coin,
+            10_000_000, 86400_000, 2,
+            &clock, scenario.ctx(),
+        );
+        test_scenario::return_shared(account_a);
+        clock::destroy_for_testing(clock);
+
+        // Payer cancels but passes merchant B → should abort EMerchantMismatch
+        scenario.next_tx(payer);
+        let mut account_b = test_scenario::take_shared_by_id<merchant::MerchantAccount>(&scenario, id_b);
+        let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
+
+        payment::cancel_subscription(&mut account_b, sub, scenario.ctx());
+
+        test_scenario::return_shared(account_b);
+        scenario.end();
+    }
+
     #[test]
     #[expected_failure(abort_code = payment::EPaused)]
     fun test_subscribe_paused_merchant_fails() {
