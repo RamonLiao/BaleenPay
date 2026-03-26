@@ -5,6 +5,8 @@ import { DAppKitProvider } from '@mysten/dapp-kit-react'
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FloatSyncProvider } from '@floatsync/react'
+import { Nav } from '@/components/Nav'
+import { Footer } from '@/components/Footer'
 import { DEMO_CONFIG } from '@/lib/config'
 import './globals.css'
 
@@ -27,7 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryClientProvider client={queryClient}>
           <DAppKitProvider dAppKit={dAppKit}>
             <FloatSyncProvider config={DEMO_CONFIG}>
-              {children}
+              <Nav />
+              <main className="pt-20 min-h-screen">
+                {children}
+              </main>
+              <Footer />
             </FloatSyncProvider>
           </DAppKitProvider>
         </QueryClientProvider>
