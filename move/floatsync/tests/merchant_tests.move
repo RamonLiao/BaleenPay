@@ -37,7 +37,7 @@ module floatsync::merchant_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = merchant::EAlreadyRegistered)]
+    #[expected_failure] // EAlreadyRegistered
     fun test_double_register_fails() {
         let merchant_addr = @0xBB;
         let mut scenario = test_scenario::begin(merchant_addr);

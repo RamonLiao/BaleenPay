@@ -21,6 +21,7 @@ export function buildKeeperWithdraw(
       tx.object(keeper.adminCapId),
       tx.object(keeper.vaultId),
       tx.pure.u64(amount),
+      tx.object('0x6'), // Clock
     ],
   })
   return tx
@@ -67,6 +68,7 @@ export function buildKeeperDeposit(
       tx.object(keeper.adminCapId),
       tx.object(keeper.vaultId),
       tx.pure.u64(amount),
+      tx.object('0x6'), // Clock
     ],
   })
 

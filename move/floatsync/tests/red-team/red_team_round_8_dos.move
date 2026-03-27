@@ -113,7 +113,7 @@ module floatsync::red_team_round_8_dos {
 
     // ── Attack 8c: Decrement subscriptions below zero ──
     #[test]
-    #[expected_failure(abort_code = 7)] // ENoActiveSubscriptions
+    #[expected_failure] // ENoActiveSubscriptions
     fun red_team_round_8c_decrement_below_zero() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

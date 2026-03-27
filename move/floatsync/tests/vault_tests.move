@@ -2,6 +2,7 @@
 module floatsync::vault_tests {
     use sui::test_scenario;
     use sui::coin;
+    use sui::clock;
     use floatsync::merchant::{Self, AdminCap, MerchantRegistry};
     use floatsync::router::{Self, Vault, YieldVault, RouterConfig};
 
@@ -53,23 +54,6 @@ module floatsync::vault_tests {
     }
 
     #[test]
-    fun test_set_keeper() {
-        let admin = @0xAD;
-        let keeper = @0xBE;
-        let mut scenario = test_scenario::begin(admin);
-        setup(&mut scenario, admin);
-
-        scenario.next_tx(admin);
-        let admin_cap = scenario.take_from_sender<AdminCap>();
-        let mut config = scenario.take_shared<RouterConfig>();
-        router::set_keeper(&admin_cap, &mut config, keeper);
-        assert!(router::get_keeper(&config) == keeper);
-        test_scenario::return_shared(config);
-        scenario.return_to_sender(admin_cap);
-        scenario.end();
-    }
-
-    #[test]
     fun test_keeper_withdraw() {
         let admin = @0xAD;
         let mut scenario = test_scenario::begin(admin);
@@ -92,9 +76,11 @@ module floatsync::vault_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
+        let clock = clock::create_for_testing(scenario.ctx());
         let withdrawn = router::keeper_withdraw<USDC>(
-            &admin_cap, &mut vault, 600, scenario.ctx(),
+            &admin_cap, &mut vault, 600, &clock, scenario.ctx(),
         );
+        clock::destroy_for_testing(clock);
         assert!(withdrawn.value() == 600);
         assert!(router::vault_balance(&vault) == 400);
         assert!(router::vault_total_deposited(&vault) == 600);
@@ -126,9 +112,11 @@ module floatsync::vault_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
+        let clock = clock::create_for_testing(scenario.ctx());
         let withdrawn = router::keeper_withdraw<USDC>(
-            &admin_cap, &mut vault, 200, scenario.ctx(),
+            &admin_cap, &mut vault, 200, &clock, scenario.ctx(),
         ); // should abort
+        clock::destroy_for_testing(clock);
         coin::burn_for_testing(withdrawn);
         test_scenario::return_shared(vault);
         scenario.return_to_sender(admin_cap);

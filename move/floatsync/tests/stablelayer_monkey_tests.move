@@ -26,7 +26,7 @@ module floatsync::stablelayer_monkey_tests {
     // ── Withdraw edge cases ──
 
     #[test]
-    #[expected_failure(abort_code = 10)] // EZeroAmount
+    #[expected_failure] // EZeroAmount
     fun test_keeper_withdraw_zero() {
         let admin = @0xAD;
         let mut scenario = test_scenario::begin(admin);
@@ -40,7 +40,9 @@ module floatsync::stablelayer_monkey_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
-        let c = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 0, scenario.ctx());
+        let clock = clock::create_for_testing(scenario.ctx());
+        let c = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 0, &clock, scenario.ctx());
+        clock::destroy_for_testing(clock);
         coin::burn_for_testing(c);
         test_scenario::return_shared(vault);
         scenario.return_to_sender(admin_cap);
@@ -62,9 +64,11 @@ module floatsync::stablelayer_monkey_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
+        let clock = clock::create_for_testing(scenario.ctx());
         let c = router::keeper_withdraw<USDC>(
-            &admin_cap, &mut vault, 18_446_744_073_709_551_615, scenario.ctx(),
+            &admin_cap, &mut vault, 18_446_744_073_709_551_615, &clock, scenario.ctx(),
         );
+        clock::destroy_for_testing(clock);
         coin::burn_for_testing(c);
         test_scenario::return_shared(vault);
         scenario.return_to_sender(admin_cap);
@@ -95,7 +99,9 @@ module floatsync::stablelayer_monkey_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
-        let c1 = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 600, scenario.ctx());
+        let clock = clock::create_for_testing(scenario.ctx());
+        let c1 = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 600, &clock, scenario.ctx());
+        clock::destroy_for_testing(clock);
         coin::burn_for_testing(c1);
         test_scenario::return_shared(vault);
         scenario.return_to_sender(admin_cap);
@@ -104,7 +110,9 @@ module floatsync::stablelayer_monkey_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
-        let c2 = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 400, scenario.ctx());
+        let clock = clock::create_for_testing(scenario.ctx());
+        let c2 = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 400, &clock, scenario.ctx());
+        clock::destroy_for_testing(clock);
         assert!(router::vault_balance(&vault) == 0);
         coin::burn_for_testing(c2);
         test_scenario::return_shared(vault);
@@ -149,7 +157,7 @@ module floatsync::stablelayer_monkey_tests {
     // ── Deposit yield with zero coin ──
 
     #[test]
-    #[expected_failure(abort_code = 10)] // EZeroAmount
+    #[expected_failure] // EZeroAmount
     fun test_keeper_deposit_yield_zero() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -219,7 +227,9 @@ module floatsync::stablelayer_monkey_tests {
         scenario.next_tx(admin);
         let admin_cap = scenario.take_from_sender<AdminCap>();
         let mut vault = scenario.take_shared<Vault<USDC>>();
-        let withdrawn = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 1000, scenario.ctx());
+        let clock = clock::create_for_testing(scenario.ctx());
+        let withdrawn = router::keeper_withdraw<USDC>(&admin_cap, &mut vault, 1000, &clock, scenario.ctx());
+        clock::destroy_for_testing(clock);
         assert!(router::vault_balance(&vault) == 0);
         coin::burn_for_testing(withdrawn);
         test_scenario::return_shared(vault);

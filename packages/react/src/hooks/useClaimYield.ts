@@ -24,7 +24,7 @@ export function useClaimYield(): UseClaimYieldReturn {
     setTxDigest(null)
   }, [])
 
-  const claim = useCallback(async (merchantCapId: string) => {
+  const claim = useCallback(async (merchantCapId: string, coinType: string = 'USDB') => {
     if (!account) {
       setError(new Error('Wallet not connected'))
       setStatus('error')
@@ -36,7 +36,7 @@ export function useClaimYield(): UseClaimYieldReturn {
       setStatus('building')
       setError(null)
       setTxDigest(null)
-      const { tx } = client.claimYield(merchantCapId)
+      const { tx } = client.claimYield(merchantCapId, coinType)
 
       // Sign & execute via dapp-kit
       setStatus('signing')

@@ -10,16 +10,20 @@ module floatsync::router {
     const MODE_STABLELAYER: u8 = 1;
 
     // ── Error codes ──
+    #[error]
     const EInvalidMode: u64 = 20;
+    #[error]
     const ESameMode: u64 = 21;
+    #[error]
     const ENotStableLayerMode: u64 = 25;
+    #[error]
     const EZeroAmount: u64 = 10;
 
     /// Shared config object controlling payment routing strategy.
+    /// AdminCap is the sole gatekeeper for all privileged operations (including keeper ops).
     public struct RouterConfig has key {
         id: UID,
         mode: u8,
-        keeper: address,
     }
 
     /// Shared vault holding coins awaiting StableLayer deposit.
@@ -42,7 +46,6 @@ module floatsync::router {
         transfer::share_object(RouterConfig {
             id: object::new(ctx),
             mode: MODE_FALLBACK,
-            keeper: @0x0,
         });
     }
 
@@ -63,14 +66,6 @@ module floatsync::router {
         let old_mode = config.mode;
         config.mode = new_mode;
         events::emit_router_mode_changed(old_mode, new_mode);
-    }
-
-    public fun set_keeper(
-        _admin: &AdminCap,
-        config: &mut RouterConfig,
-        keeper: address,
-    ) {
-        config.keeper = keeper;
     }
 
     // ── Vault lifecycle ──
@@ -127,10 +122,17 @@ module floatsync::router {
         _admin: &AdminCap,
         vault: &mut Vault<T>,
         amount: u64,
+        clock: &Clock,
         ctx: &mut TxContext,
     ): Coin<T> {
         assert!(amount > 0, EZeroAmount);
         vault.total_deposited = vault.total_deposited + amount;
+        events::emit_vault_withdrawn(
+            object::id(vault),
+            amount,
+            ctx.sender(),
+            clock.timestamp_ms(),
+        );
         vault.balance.split(amount).into_coin(ctx)
     }
 
@@ -165,7 +167,6 @@ module floatsync::router {
     // ── Getters ──
 
     public fun get_mode(config: &RouterConfig): u8 { config.mode }
-    public fun get_keeper(config: &RouterConfig): address { config.keeper }
     public fun is_fallback(config: &RouterConfig): bool { config.mode == MODE_FALLBACK }
     public fun is_stablelayer(config: &RouterConfig): bool { config.mode == MODE_STABLELAYER }
 
@@ -180,5 +181,10 @@ module floatsync::router {
     #[test_only]
     public fun deposit_to_vault_for_testing<T>(vault: &mut Vault<T>, coin: Coin<T>) {
         vault.balance.join(coin.into_balance());
+    }
+
+    #[test_only]
+    public fun deposit_to_yield_vault_for_testing<T>(yv: &mut YieldVault<T>, coin: Coin<T>) {
+        yv.balance.join(coin.into_balance());
     }
 }

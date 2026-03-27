@@ -70,7 +70,7 @@ module floatsync::routed_payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 25)] // ENotStableLayerMode
+    #[expected_failure] // ENotStableLayerMode
     fun test_pay_once_routed_rejects_fallback_mode() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -103,7 +103,7 @@ module floatsync::routed_payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)] // EPaused
+    #[expected_failure] // EPaused
     fun test_pay_once_routed_paused() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

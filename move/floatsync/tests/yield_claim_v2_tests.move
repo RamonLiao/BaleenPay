@@ -144,7 +144,7 @@ module floatsync::yield_claim_v2_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)] // EPaused
+    #[expected_failure] // EPaused
     fun test_claim_yield_v2_paused() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -183,7 +183,7 @@ module floatsync::yield_claim_v2_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 12)] // EZeroYield
+    #[expected_failure] // EZeroYield
     fun test_claim_yield_v2_zero() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

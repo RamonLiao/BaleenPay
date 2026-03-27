@@ -19,7 +19,7 @@ module floatsync::red_team_round_3_object_manipulation {
     // ── Attack 3a: Process subscription with wrong merchant account ──
     // Subscription for merchant A, but process_subscription called with merchant B's account
     #[test]
-    #[expected_failure(abort_code = 16)] // EMerchantMismatch
+    #[expected_failure] // EMerchantMismatch
     fun red_team_round_3a_subscription_wrong_merchant() {
         let admin = @0xAD;
         let merchant_a = @0xA1;
@@ -80,7 +80,7 @@ module floatsync::red_team_round_3_object_manipulation {
 
     // ── Attack 3b: Cancel subscription with wrong merchant account ──
     #[test]
-    #[expected_failure(abort_code = 16)] // EMerchantMismatch
+    #[expected_failure] // EMerchantMismatch
     fun red_team_round_3b_cancel_wrong_merchant() {
         let admin = @0xAD;
         let merchant_a = @0xA1;

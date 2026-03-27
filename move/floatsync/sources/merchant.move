@@ -5,11 +5,17 @@ module floatsync::merchant {
     use floatsync::events;
 
     // ── Error codes (spec §3.8) ──
+    #[error]
     const ENotMerchantOwner: u64 = 0;     // MerchantCap.merchant_id != account.id
+    #[error]
     const EPaused: u64 = 2;               // MerchantAccount is paused (any source)
+    #[error]
     const EAlreadyRegistered: u64 = 6;    // Merchant address already in registry
+    #[error]
     const EZeroYield: u64 = 12;           // accrued_yield == 0, nothing to claim
+    #[error]
     const ENoActiveSubscriptions: u64 = 7; // active_subscriptions == 0, cannot decrement
+    #[error]
     const EInsufficientPrincipal: u64 = 8; // idle_principal < amount for credit_yield
     #[error]
     const EAdminFrozen: u64 = 24;         // admin-paused, self_unpause blocked
@@ -27,7 +33,7 @@ module floatsync::merchant {
         merchants: Table<address, ID>,
     }
 
-    /// Owned capability proving merchant ownership. Required for claim_yield.
+    /// Owned capability proving merchant ownership. Required for claim_yield_v2 (router module).
     public struct MerchantCap has key, store {
         id: UID,
         merchant_id: ID,
@@ -148,21 +154,6 @@ module floatsync::merchant {
         assert!(!account.paused_by_admin, EAdminFrozen);
         account.paused_by_self = false;
         events::emit_merchant_unpaused(object::id(account), false);
-    }
-
-    /// Claim accrued yield. Requires MerchantCap matching this account.
-    /// Blocked during ANY pause (admin or self) — yield extraction is a fund outflow.
-    public fun claim_yield(
-        cap: &MerchantCap,
-        account: &mut MerchantAccount,
-    ): u64 {
-        assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
-        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
-        let amount = account.accrued_yield;
-        assert!(amount > 0, EZeroYield);
-        account.accrued_yield = 0;
-        events::emit_yield_claimed(object::id(account), amount);
-        amount
     }
 
     // ── Package-internal mutators (used by payment module) ──

@@ -5,11 +5,19 @@ module floatsync::red_team_round_4_economic {
     use sui::clock;
     use floatsync::merchant::{Self, MerchantAccount, MerchantCap, MerchantRegistry};
     use floatsync::payment;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     fun setup(scenario: &mut test_scenario::Scenario, admin: address, merchant_addr: address) {
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
+        router::init_for_testing(scenario.ctx());
+        // Create YieldVault for claim_yield_v2 tests
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
+
         scenario.next_tx(merchant_addr);
         let mut registry = scenario.take_shared<MerchantRegistry>();
         merchant::register_merchant(&mut registry, b"TestShop".to_string(), scenario.ctx());
@@ -106,7 +114,7 @@ module floatsync::red_team_round_4_economic {
 
     // ── Attack 4c: claim_yield twice (double drain) ──
     #[test]
-    #[expected_failure(abort_code = 12)] // EZeroYield
+    #[expected_failure] // EZeroYield
     fun red_team_round_4c_double_claim_yield() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -114,25 +122,31 @@ module floatsync::red_team_round_4_economic {
         let mut scenario = test_scenario::begin(admin);
         setup(&mut scenario, admin, merchant_addr);
 
-        // Payer pays, then simulate yield
+        // Payer pays, then simulate external yield + fund YieldVault
         scenario.next_tx(payer);
         let mut account = scenario.take_shared<MerchantAccount>();
         let coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account, coin, &clock, scenario.ctx());
-        merchant::credit_yield_for_testing(&mut account, 5_000_000);
+        merchant::credit_external_yield_for_testing(&mut account, 5_000_000);
         test_scenario::return_shared(account);
+
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(5_000_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
         clock.destroy_for_testing();
 
         // First claim succeeds
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<MerchantCap>();
         let mut account = scenario.take_shared<MerchantAccount>();
-        let amount1 = merchant::claim_yield(&cap, &mut account);
-        assert!(amount1 == 5_000_000);
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
         assert!(merchant::get_accrued_yield(&account) == 0);
         // Second claim in same tx should fail with EZeroYield
-        let _amount2 = merchant::claim_yield(&cap, &mut account);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();

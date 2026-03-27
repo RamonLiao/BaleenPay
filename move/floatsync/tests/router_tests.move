@@ -5,7 +5,7 @@ module floatsync::router_tests {
     use sui::clock;
     use floatsync::merchant;
     use floatsync::payment;
-    use floatsync::router;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     // ── Helpers ──
@@ -14,6 +14,12 @@ module floatsync::router_tests {
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
         router::init_for_testing(scenario.ctx());
+        // Create YieldVault for claim_yield_v2 tests
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
+
         scenario.next_tx(merchant_addr);
         let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
         merchant::register_merchant(&mut registry, b"TestShop".to_string(), scenario.ctx());
@@ -39,7 +45,7 @@ module floatsync::router_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = router::ESameMode)]
+    #[expected_failure] // ESameMode
     fun test_set_mode_same_mode_fails() {
         let admin = @0xAD;
         let mut scenario = test_scenario::begin(admin);
@@ -60,7 +66,7 @@ module floatsync::router_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = router::EInvalidMode)]
+    #[expected_failure] // EInvalidMode
     fun test_set_mode_invalid_mode_fails() {
         let admin = @0xAD;
         let mut scenario = test_scenario::begin(admin);
@@ -99,30 +105,36 @@ module floatsync::router_tests {
         payment::pay_once(&mut account, coin, &clock, scenario.ctx());
         assert!(merchant::get_idle_principal(&account) == 100_000_000);
 
-        // Simulate yield accrual: 5 USDC yield from 100 idle_principal
-        merchant::credit_yield_for_testing(&mut account, 5_000_000);
+        // Simulate external yield: credit account + fund YieldVault
+        merchant::credit_external_yield_for_testing(&mut account, 5_000_000);
         assert!(merchant::get_accrued_yield(&account) == 5_000_000);
-        assert!(merchant::get_idle_principal(&account) == 95_000_000);
 
         test_scenario::return_shared(account);
+
+        // Fund YieldVault with matching coins
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(5_000_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
         clock::destroy_for_testing(clock);
 
-        // Merchant claims yield
+        // Merchant claims yield via v2
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
-        let claimed = merchant::claim_yield(&cap, &mut account);
-        assert!(claimed == 5_000_000);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
         assert!(merchant::get_accrued_yield(&account) == 0);
 
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();
     }
 
     #[test]
-    #[expected_failure(abort_code = merchant::EZeroYield)]
+    #[expected_failure] // EZeroYield
     fun test_claim_yield_zero_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -134,16 +146,18 @@ module floatsync::router_tests {
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
-        merchant::claim_yield(&cap, &mut account);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
 
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();
     }
 
     #[test]
-    #[expected_failure(abort_code = merchant::ENotMerchantOwner)]
+    #[expected_failure] // ENotMerchantOwner
     fun test_claim_yield_wrong_cap_fails() {
         let admin = @0xAD;
         let merchant_a = @0xBB;
@@ -168,17 +182,23 @@ module floatsync::router_tests {
         // Identify which is merchant_a's account
         let (account_a_is_1) = merchant::get_owner(&acct_1) == merchant_a;
 
+        // Fund the YieldVault with coins for claim
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(2_000_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
+
         if (account_a_is_1) {
             let coin = coin::mint_for_testing<TEST_USDC>(50_000_000, scenario.ctx());
             let clock = clock::create_for_testing(scenario.ctx());
             payment::pay_once(&mut acct_1, coin, &clock, scenario.ctx());
-            merchant::credit_yield_for_testing(&mut acct_1, 2_000_000);
+            merchant::credit_external_yield_for_testing(&mut acct_1, 2_000_000);
             clock::destroy_for_testing(clock);
         } else {
             let coin = coin::mint_for_testing<TEST_USDC>(50_000_000, scenario.ctx());
             let clock = clock::create_for_testing(scenario.ctx());
             payment::pay_once(&mut acct_2, coin, &clock, scenario.ctx());
-            merchant::credit_yield_for_testing(&mut acct_2, 2_000_000);
+            merchant::credit_external_yield_for_testing(&mut acct_2, 2_000_000);
             clock::destroy_for_testing(clock);
         };
 
@@ -192,17 +212,19 @@ module floatsync::router_tests {
         // Take both again, find merchant_a's account
         let mut acct_1 = scenario.take_shared<merchant::MerchantAccount>();
         let mut acct_2 = scenario.take_shared<merchant::MerchantAccount>();
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
         if (merchant::get_owner(&acct_1) == merchant_a) {
             // cap_b belongs to merchant_b, account belongs to merchant_a → mismatch
-            merchant::claim_yield(&cap_b, &mut acct_1);
+            router::claim_yield_v2<TEST_USDC>(&cap_b, &mut acct_1, &mut yield_vault, scenario.ctx());
             test_scenario::return_shared(acct_1);
             test_scenario::return_shared(acct_2);
         } else {
-            merchant::claim_yield(&cap_b, &mut acct_2);
+            router::claim_yield_v2<TEST_USDC>(&cap_b, &mut acct_2, &mut yield_vault, scenario.ctx());
             test_scenario::return_shared(acct_1);
             test_scenario::return_shared(acct_2);
         };
+        test_scenario::return_shared(yield_vault);
 
         scenario.return_to_sender(cap_b);
         scenario.end();

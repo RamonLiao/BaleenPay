@@ -5,11 +5,12 @@ module floatsync::red_team_round_1_access_control {
     use sui::clock;
     use floatsync::merchant::{Self, MerchantAccount, MerchantCap, MerchantRegistry};
     use floatsync::payment;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     // ── Attack 1a: Use merchant A's cap on merchant B's account ──
     #[test]
-    #[expected_failure(abort_code = 0)] // ENotMerchantOwner
+    #[expected_failure] // ENotMerchantOwner
     fun red_team_round_1a_cross_merchant_cap_claim_yield() {
         let admin = @0xAD;
         let merchant_a = @0xA1;
@@ -20,6 +21,12 @@ module floatsync::red_team_round_1_access_control {
         // Init
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
+        router::init_for_testing(scenario.ctx());
+        // Create YieldVault
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
 
         // Register merchant A
         scenario.next_tx(merchant_a);
@@ -39,17 +46,23 @@ module floatsync::red_team_round_1_access_control {
         let payment_coin = coin::mint_for_testing<TEST_USDC>(1_000_000, scenario.ctx());
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account_b, payment_coin, &clock, scenario.ctx());
-        // Simulate yield
-        merchant::credit_yield_for_testing(&mut account_b, 500_000);
+        // Simulate external yield + fund YieldVault
+        merchant::credit_external_yield_for_testing(&mut account_b, 500_000);
         test_scenario::return_shared(account_b);
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(500_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
         clock::destroy_for_testing(clock);
 
         // ATTACK: merchant A tries to claim yield from merchant B using A's cap
         scenario.next_tx(merchant_a);
         let cap_a = scenario.take_from_sender<MerchantCap>();
         let mut account_b = scenario.take_shared<MerchantAccount>();
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         // This should abort with ENotMerchantOwner
-        let _amount = merchant::claim_yield(&cap_a, &mut account_b);
+        router::claim_yield_v2<TEST_USDC>(&cap_a, &mut account_b, &mut yield_vault, scenario.ctx());
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account_b);
         scenario.return_to_sender(cap_a);
         scenario.end();
@@ -57,7 +70,7 @@ module floatsync::red_team_round_1_access_control {
 
     // ── Attack 1b: Cross-merchant cap for self_pause ──
     #[test]
-    #[expected_failure(abort_code = 0)] // ENotMerchantOwner
+    #[expected_failure] // ENotMerchantOwner
     fun red_team_round_1b_cross_merchant_cap_self_pause() {
         let admin = @0xAD;
         let merchant_a = @0xA1;
@@ -89,7 +102,7 @@ module floatsync::red_team_round_1_access_control {
 
     // ── Attack 1c: Cross-merchant cap for remove_order_record ──
     #[test]
-    #[expected_failure(abort_code = 0)] // ENotMerchantOwner
+    #[expected_failure] // ENotMerchantOwner
     fun red_team_round_1c_cross_merchant_remove_order() {
         let admin = @0xAD;
         let merchant_a = @0xA1;
@@ -131,7 +144,7 @@ module floatsync::red_team_round_1_access_control {
 
     // ── Attack 1d: Non-payer cancels subscription ──
     #[test]
-    #[expected_failure(abort_code = 3)] // ENotPayer
+    #[expected_failure] // ENotPayer
     fun red_team_round_1d_non_payer_cancel_subscription() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

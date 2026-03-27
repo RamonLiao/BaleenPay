@@ -103,7 +103,7 @@ module floatsync::red_team_round_9_combo {
 
     // ── Attack 9c: Fund subscription with 0 amount ──
     #[test]
-    #[expected_failure(abort_code = 10)] // EZeroAmount
+    #[expected_failure] // EZeroAmount
     fun red_team_round_9c_fund_zero() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

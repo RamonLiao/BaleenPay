@@ -49,12 +49,7 @@ describe('buildClaimYield (revised)', () => {
     expect(tx.getData).toBeDefined()
   })
 
-  it('builds legacy claim_yield when no coinType', () => {
-    const tx = buildClaimYield(config, '0xMERCHANT_CAP')
-    expect(tx).toBeInstanceOf(Transaction)
-  })
-
-  it('throws without yieldVaultId when coinType provided', () => {
+  it('throws without yieldVaultId', () => {
     const noYvConfig = { ...config, yieldVaultId: undefined }
     expect(() => buildClaimYield(noYvConfig, '0xCAP', 'USDB'))
       .toThrow('yieldVaultId is required')

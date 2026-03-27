@@ -11,15 +11,25 @@ module floatsync::payment {
     use floatsync::router::{Self, Vault, RouterConfig};
 
     // ── Error codes (spec §3.8) ──
+    #[error]
     const EPaused: u64 = 2;
+    #[error]
     const ENotPayer: u64 = 3;
+    #[error]
     const EZeroAmount: u64 = 10;
+    #[error]
     const ENotDue: u64 = 11;
+    #[error]
     const EInsufficientPrepaid: u64 = 13;
+    #[error]
     const EZeroPeriod: u64 = 14;
+    #[error]
     const EInsufficientBalance: u64 = 15;
+    #[error]
     const EMerchantMismatch: u64 = 16;
+    #[error]
     const EZeroPrepaidPeriods: u64 = 17;
+    #[error]
     const ENotMerchantOwner: u64 = 0;
     #[error]
     const EOrderAlreadyPaid: u64 = 18;

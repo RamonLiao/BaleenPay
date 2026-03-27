@@ -122,7 +122,7 @@ export interface UseYieldHistoryReturn {
 // ── useClaimYield ──
 
 export interface UseClaimYieldReturn {
-  claim: (merchantCapId: string) => Promise<void>
+  claim: (merchantCapId: string, coinType?: string) => Promise<void>
   status: MutationStatus
   error: Error | null
   txDigest: string | null
