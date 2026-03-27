@@ -203,4 +203,56 @@ module floatsync::events {
     ) {
         event::emit(OrderRecordRemoved { merchant_id, payer, order_id });
     }
+
+    // ── StableLayer vault events ──
+
+    public struct VaultDeposited has copy, drop {
+        vault_id: ID,
+        amount: u64,
+        merchant_id: ID,
+        payer: address,
+        timestamp: u64,
+    }
+
+    public struct VaultWithdrawn has copy, drop {
+        vault_id: ID,
+        amount: u64,
+        keeper: address,
+        timestamp: u64,
+    }
+
+    public struct YieldCredited has copy, drop {
+        merchant_id: ID,
+        amount: u64,
+        source: u8,    // 0=manual, 1=stablelayer
+        timestamp: u64,
+    }
+
+    public(package) fun emit_vault_deposited(
+        vault_id: ID,
+        amount: u64,
+        merchant_id: ID,
+        payer: address,
+        timestamp: u64,
+    ) {
+        event::emit(VaultDeposited { vault_id, amount, merchant_id, payer, timestamp });
+    }
+
+    public(package) fun emit_vault_withdrawn(
+        vault_id: ID,
+        amount: u64,
+        keeper: address,
+        timestamp: u64,
+    ) {
+        event::emit(VaultWithdrawn { vault_id, amount, keeper, timestamp });
+    }
+
+    public(package) fun emit_yield_credited(
+        merchant_id: ID,
+        amount: u64,
+        source: u8,
+        timestamp: u64,
+    ) {
+        event::emit(YieldCredited { merchant_id, amount, source, timestamp });
+    }
 }
