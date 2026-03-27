@@ -6,11 +6,13 @@ module floatsync::merchant {
 
     // ── Error codes (spec §3.8) ──
     const ENotMerchantOwner: u64 = 0;     // MerchantCap.merchant_id != account.id
-    const EPaused: u64 = 2;               // MerchantAccount.paused == true
+    const EPaused: u64 = 2;               // MerchantAccount is paused (any source)
     const EAlreadyRegistered: u64 = 6;    // Merchant address already in registry
     const EZeroYield: u64 = 12;           // accrued_yield == 0, nothing to claim
     const ENoActiveSubscriptions: u64 = 7; // active_subscriptions == 0, cannot decrement
     const EInsufficientPrincipal: u64 = 8; // idle_principal < amount for credit_yield
+    #[error]
+    const EAdminFrozen: u64 = 24;         // admin-paused, self_unpause blocked
 
     // ── Structs ──
 
@@ -32,7 +34,10 @@ module floatsync::merchant {
     }
 
     /// Shared merchant ledger. Payers write via pay_once; privileged ops need cap.
-    /// NOTE: phantom T + active_subscriptions deferred to Task 5 (subscriptions).
+    /// Dual-pause model: two independent flags, `get_paused()` returns OR.
+    ///   - `paused_by_admin`: regulatory freeze (AdminCap-gated)
+    ///   - `paused_by_self`: merchant voluntary pause (MerchantCap-gated)
+    /// Admin operations never touch `paused_by_self` and vice versa.
     public struct MerchantAccount has key {
         id: UID,
         owner: address,
@@ -41,7 +46,8 @@ module floatsync::merchant {
         idle_principal: u64,
         accrued_yield: u64,
         active_subscriptions: u64,
-        paused: bool,
+        paused_by_admin: bool,
+        paused_by_self: bool,
     }
 
     // ── Init ──
@@ -85,7 +91,8 @@ module floatsync::merchant {
             idle_principal: 0,
             accrued_yield: 0,
             active_subscriptions: 0,
-            paused: false,
+            paused_by_admin: false,
+            paused_by_self: false,
         };
 
         registry.merchants.add(sender, account_id);
@@ -102,22 +109,23 @@ module floatsync::merchant {
         );
     }
 
-    /// Emergency pause. Requires AdminCap.
+    /// Admin freeze. Requires AdminCap. Only touches `paused_by_admin`.
     public fun pause_merchant(
         _admin: &AdminCap,
         account: &mut MerchantAccount,
     ) {
-        account.paused = true;
-        events::emit_merchant_paused(object::id(account));
+        account.paused_by_admin = true;
+        events::emit_merchant_paused(object::id(account), true);
     }
 
-    /// Unpause. Requires AdminCap.
+    /// Admin unfreeze. Requires AdminCap. Only clears `paused_by_admin`.
+    /// Preserves merchant's self-pause if active.
     public fun unpause_merchant(
         _admin: &AdminCap,
         account: &mut MerchantAccount,
     ) {
-        account.paused = false;
-        events::emit_merchant_unpaused(object::id(account));
+        account.paused_by_admin = false;
+        events::emit_merchant_unpaused(object::id(account), true);
     }
 
     /// Merchant self-pause. Requires MerchantCap matching this account.
@@ -126,27 +134,29 @@ module floatsync::merchant {
         account: &mut MerchantAccount,
     ) {
         assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
-        account.paused = true;
-        events::emit_merchant_paused(object::id(account));
+        account.paused_by_self = true;
+        events::emit_merchant_paused(object::id(account), false);
     }
 
     /// Merchant self-unpause. Requires MerchantCap matching this account.
+    /// Cannot override admin freeze — only admin can lift admin-paused state.
     public fun self_unpause(
         cap: &MerchantCap,
         account: &mut MerchantAccount,
     ) {
         assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
-        account.paused = false;
-        events::emit_merchant_unpaused(object::id(account));
+        assert!(!account.paused_by_admin, EAdminFrozen);
+        account.paused_by_self = false;
+        events::emit_merchant_unpaused(object::id(account), false);
     }
 
     /// Claim accrued yield. Requires MerchantCap matching this account.
-    /// Resets accrued_yield to 0 and returns the amount claimed.
-    /// Actual coin transfer is handled by the caller (router module).
+    /// Blocked during ANY pause (admin or self) — yield extraction is a fund outflow.
     public fun claim_yield(
         cap: &MerchantCap,
         account: &mut MerchantAccount,
     ): u64 {
+        assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
         assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
         let amount = account.accrued_yield;
         assert!(amount > 0, EZeroYield);
@@ -196,10 +206,13 @@ module floatsync::merchant {
 
     public fun get_total_received(account: &MerchantAccount): u64 { account.total_received }
     public fun get_brand_name(account: &MerchantAccount): String { account.brand_name }
-    public fun get_paused(account: &MerchantAccount): bool { account.paused }
+    /// Returns true if paused by ANY source (admin OR self).
+    public fun get_paused(account: &MerchantAccount): bool { account.paused_by_admin || account.paused_by_self }
     public fun get_idle_principal(account: &MerchantAccount): u64 { account.idle_principal }
     public fun get_accrued_yield(account: &MerchantAccount): u64 { account.accrued_yield }
     public fun get_owner(account: &MerchantAccount): address { account.owner }
     public fun get_active_subscriptions(account: &MerchantAccount): u64 { account.active_subscriptions }
+    public fun get_admin_paused(account: &MerchantAccount): bool { account.paused_by_admin }
+    public fun get_self_paused(account: &MerchantAccount): bool { account.paused_by_self }
     public fun get_merchant_id(cap: &MerchantCap): ID { cap.merchant_id }
 }

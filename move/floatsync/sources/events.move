@@ -50,10 +50,12 @@ module floatsync::events {
 
     public struct MerchantPaused has copy, drop {
         merchant_id: ID,
+        by_admin: bool,
     }
 
     public struct MerchantUnpaused has copy, drop {
         merchant_id: ID,
+        by_admin: bool,
     }
 
     public struct RouterModeChanged has copy, drop {
@@ -77,12 +79,12 @@ module floatsync::events {
         event::emit(MerchantRegistered { merchant_id, brand_name, owner });
     }
 
-    public(package) fun emit_merchant_paused(merchant_id: ID) {
-        event::emit(MerchantPaused { merchant_id });
+    public(package) fun emit_merchant_paused(merchant_id: ID, by_admin: bool) {
+        event::emit(MerchantPaused { merchant_id, by_admin });
     }
 
-    public(package) fun emit_merchant_unpaused(merchant_id: ID) {
-        event::emit(MerchantUnpaused { merchant_id });
+    public(package) fun emit_merchant_unpaused(merchant_id: ID, by_admin: bool) {
+        event::emit(MerchantUnpaused { merchant_id, by_admin });
     }
 
     public(package) fun emit_payment_received(

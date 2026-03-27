@@ -418,10 +418,12 @@ module floatsync::payment_tests {
 
         // Payer adds 30 more USDC
         scenario.next_tx(payer);
+        let account = scenario.take_shared<merchant::MerchantAccount>();
         let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
         let extra = coin::mint_for_testing<TEST_USDC>(30_000_000, scenario.ctx());
 
-        payment::fund_subscription(&mut sub, extra, scenario.ctx());
+        payment::fund_subscription(&account, &mut sub, extra, scenario.ctx());
+        test_scenario::return_shared(account);
 
         // Balance: 10 (1 remaining from subscribe) + 30 = 40
         assert!(payment::get_sub_balance(&sub) == 40_000_000);
@@ -456,11 +458,13 @@ module floatsync::payment_tests {
 
         // Stranger tries to fund → should abort
         scenario.next_tx(stranger);
+        let account = scenario.take_shared<merchant::MerchantAccount>();
         let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
         let extra = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
 
-        payment::fund_subscription(&mut sub, extra, scenario.ctx());
+        payment::fund_subscription(&account, &mut sub, extra, scenario.ctx());
 
+        test_scenario::return_shared(account);
         test_scenario::return_shared(sub);
         scenario.end();
     }

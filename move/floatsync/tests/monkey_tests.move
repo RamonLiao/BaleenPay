@@ -294,10 +294,12 @@ module floatsync::monkey_tests {
 
         // Fund with 0 → should abort
         scenario.next_tx(payer);
+        let account = scenario.take_shared<merchant::MerchantAccount>();
         let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
         let zero = coin::mint_for_testing<TEST_USDC>(0, scenario.ctx());
-        payment::fund_subscription(&mut sub, zero, scenario.ctx());
+        payment::fund_subscription(&account, &mut sub, zero, scenario.ctx());
 
+        test_scenario::return_shared(account);
         test_scenario::return_shared(sub);
         scenario.end();
     }

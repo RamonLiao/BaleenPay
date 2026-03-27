@@ -28,6 +28,8 @@ module floatsync::payment {
     const EExceedsMaxPrepaidPeriods: u64 = 22;
     #[error]
     const EOverflow: u64 = 23;
+    #[error]
+    const EAdminFrozen: u64 = 24;
     const MAX_ORDER_ID_BYTES: u64 = 64;
     const MAX_PREPAID_PERIODS: u64 = 1000;
 
@@ -125,10 +127,11 @@ module floatsync::payment {
         transfer::public_transfer(coin, merchant::get_owner(account));
 
         let now = clock.timestamp_ms();
+        let coin_type = type_name::get<T>().into_string().to_string();
         df::add(merchant::uid_mut(account), key, OrderRecord {
             amount,
             timestamp_ms: now,
-            coin_type: type_name::get<T>().into_string().to_string(),
+            coin_type,
         });
 
         events::emit_payment_received_v2(
@@ -138,7 +141,7 @@ module floatsync::payment {
             0,
             now,
             key.order_id,
-            type_name::get<T>().into_string().to_string(),
+            coin_type,
         );
     }
 
@@ -160,6 +163,10 @@ module floatsync::payment {
         assert!(amount_per_period > 0, EZeroAmount);
         assert!(period_ms > 0, EZeroPeriod);
         assert!(prepaid_periods > 0, EZeroPrepaidPeriods);
+
+        // Overflow guard (backported from subscribe_v2)
+        assert!(prepaid_periods <= MAX_PREPAID_PERIODS, EExceedsMaxPrepaidPeriods);
+        assert!(amount_per_period <= 18_446_744_073_709_551_615 / prepaid_periods, EOverflow);
 
         let total_required = amount_per_period * prepaid_periods;
         assert!(coin.value() >= total_required, EInsufficientPrepaid);
@@ -259,17 +266,18 @@ module floatsync::payment {
         let now = clock.timestamp_ms();
         let merchant_id = object::id(account);
 
+        let coin_type = type_name::get<T>().into_string().to_string();
         df::add(merchant::uid_mut(account), key, OrderRecord {
             amount: total_required,
             timestamp_ms: now,
-            coin_type: type_name::get<T>().into_string().to_string(),
+            coin_type,
         });
 
         merchant::increment_subscriptions(account);
 
         events::emit_payment_received_v2(
             merchant_id, ctx.sender(), amount_per_period, 1, now,
-            key.order_id, type_name::get<T>().into_string().to_string(),
+            key.order_id, coin_type,
         );
 
         let sub_uid = object::new(ctx);
@@ -311,6 +319,9 @@ module floatsync::payment {
         transfer::public_transfer(payment.into_coin(ctx), merchant::get_owner(account));
 
         merchant::add_payment(account, subscription.amount_per_period);
+
+        // Guard against next_due overflow (could brick subscription)
+        assert!(subscription.next_due <= 18_446_744_073_709_551_615 - subscription.period_ms, EOverflow);
         subscription.next_due = subscription.next_due + subscription.period_ms;
 
         events::emit_subscription_processed(
@@ -322,11 +333,13 @@ module floatsync::payment {
     }
 
     /// Cancel subscription. Only payer can cancel. Refunds remaining balance.
+    /// Blocked during admin freeze (regulatory hold); allowed during self-pause.
     public fun cancel_subscription<T>(
         account: &mut MerchantAccount,
         subscription: Subscription<T>,
         ctx: &mut TxContext,
     ) {
+        assert!(!merchant::get_admin_paused(account), EAdminFrozen);
         assert!(ctx.sender() == subscription.payer, ENotPayer);
         assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
 
@@ -361,11 +374,15 @@ module floatsync::payment {
     }
 
     /// Add more funds to an existing subscription. Only payer can fund.
+    /// Blocked during any pause — prevents deposits into frozen entity's escrow.
     public fun fund_subscription<T>(
+        account: &MerchantAccount,
         subscription: &mut Subscription<T>,
         coin: Coin<T>,
         ctx: &TxContext,
     ) {
+        assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
+        assert!(!merchant::get_paused(account), EPaused);
         assert!(ctx.sender() == subscription.payer, ENotPayer);
         let funded_amount = coin.value();
         assert!(funded_amount > 0, EZeroAmount);
@@ -383,12 +400,14 @@ module floatsync::payment {
 
     /// Remove an order record. MerchantCap gated. Emits audit event.
     /// WARNING: Removing a record allows the same order_id to be reused.
+    /// Blocked during admin freeze — prevents ledger tampering during regulatory hold.
     public fun remove_order_record(
         cap: &MerchantCap,
         account: &mut MerchantAccount,
         payer: address,
         order_id: String,
     ) {
+        assert!(!merchant::get_admin_paused(account), EAdminFrozen);
         assert!(merchant::get_merchant_id(cap) == object::id(account), ENotMerchantOwner);
         let key = OrderKey { payer, order_id };
         let _: OrderRecord = df::remove(merchant::uid_mut(account), key);

@@ -1,6 +1,6 @@
-# FloatSync: SaaS 白牌穩定幣收款 Widget (MVP)
+# BaleenPay: SaaS 白牌穩定幣收款 Widget (MVP)
 
-> **FloatSync**：專注於解決 Payment Float (在途資金) 痛點，讓閒置的資金能夠與底層生息協議自動同步 (Sync)。
+> **BaleenPay**：像過濾浮游生物的鯨鬚 (Baleen) 一樣，專注於攔截並活化 SaaS 的 Payment Float (在途資金)，讓閒置水流自動在底層協議轉化為收益。
 
 ## 專案簡介
 這是一個訂閱收款示範系統，結合「收款後自動存入 StableLayer 的商家錢包」。從用戶端看，支付的是 BrandUSD；從平台方看，收款後資金自動進入不斷累積收益的「收益池」。
