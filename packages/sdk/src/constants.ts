@@ -39,4 +39,5 @@ export const ABORT_CODE_MAP: Record<number, { code: string; message: string }> =
   21: { code: 'SAME_MODE', message: 'Router is already in this mode' },
   22: { code: 'EXCEEDS_MAX_PREPAID_PERIODS', message: 'Prepaid periods exceeds maximum (1000)' },
   23: { code: 'OVERFLOW', message: 'Amount × periods would overflow' },
+  25: { code: 'NOT_STABLELAYER_MODE', message: 'Router is not in StableLayer mode' },
 }

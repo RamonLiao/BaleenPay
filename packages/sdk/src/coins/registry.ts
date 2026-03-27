@@ -14,6 +14,10 @@ const TESTNET_COINS: Record<string, CoinConfig> = {
     type: '0x2::sui::SUI',
     decimals: 9,
   },
+  USDB: {
+    type: '0xe25a20601a1ecc2fa5ac9e5d37b52f9ce70a1ebe787856184ffb7dbe31dba4c1::stable_layer::Stablecoin',
+    decimals: 6,
+  },
 }
 
 const MAINNET_COINS: Record<string, CoinConfig> = {

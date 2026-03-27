@@ -13,6 +13,8 @@ export interface FloatSyncConfig {
   grpcUrl?: string
   /** Custom GraphQL endpoint. Defaults to Mysten public endpoint for the network. */
   graphqlUrl?: string
+  vaultId?: ObjectId
+  yieldVaultId?: ObjectId
 }
 
 export interface PayParams {
@@ -89,6 +91,28 @@ export interface FloatSyncEventData {
 
 export type EventCallback = (event: FloatSyncEventData) => void
 export type Unsubscribe = () => void
+
+// ── StableLayer types ──
+
+export interface StableLayerConfig {
+  stableLayerPackageId: string
+  stableLayerRegistryId: string
+  busdCoinType: string
+}
+
+export interface YieldInfo {
+  idlePrincipal: bigint
+  accruedYield: bigint
+  claimableUsdb: bigint
+  estimatedApy: number
+  vaultBalance: bigint
+}
+
+export interface KeeperParams {
+  adminCapId: ObjectId
+  vaultId: ObjectId
+  yieldVaultId: ObjectId
+}
 
 // ── Merchant info ──
 
