@@ -124,7 +124,8 @@ export interface MerchantInfo {
   idlePrincipal: bigint
   accruedYield: bigint
   activeSubscriptions: number
-  paused: boolean
+  pausedByAdmin: boolean
+  pausedBySelf: boolean
 }
 
 export interface SubscriptionInfo {

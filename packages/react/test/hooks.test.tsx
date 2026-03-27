@@ -22,7 +22,8 @@ vi.mock('@mysten/sui/grpc', () => {
             idle_principal: '500',
             accrued_yield: '50',
             active_subscriptions: 2,
-            paused: false,
+            paused_by_admin: false,
+            paused_by_self: false,
           },
         },
       }
@@ -380,7 +381,8 @@ describe('useMerchant', () => {
       idlePrincipal: 500n,
       accruedYield: 50n,
       activeSubscriptions: 2,
-      paused: false,
+      pausedByAdmin: false,
+      pausedBySelf: false,
     }
 
     const { result } = renderHook(() => useMerchant(), { wrapper })
@@ -398,7 +400,8 @@ describe('useMerchant', () => {
       idlePrincipal: 0n,
       accruedYield: 0n,
       activeSubscriptions: 0,
-      paused: false,
+      pausedByAdmin: false,
+      pausedBySelf: false,
     }
 
     const { result } = renderHook(() => useMerchant('0xcustom'), { wrapper })
@@ -414,7 +417,8 @@ describe('useMerchant', () => {
       idlePrincipal: 0n,
       accruedYield: 0n,
       activeSubscriptions: 0,
-      paused: false,
+      pausedByAdmin: false,
+      pausedBySelf: false,
     }
 
     const { result } = renderHook(() => useMerchant(), { wrapper })

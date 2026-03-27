@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistory()
   const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYield()
 
+  const isPaused = merchant?.pausedByAdmin || merchant?.pausedBySelf || false
+
   // Admin action state
   const [actionStatus, setActionStatus] = useState<MutationStatus>('idle')
   const [actionError, setActionError] = useState<Error | null>(null)
@@ -78,7 +80,7 @@ export default function DashboardPage() {
             {/* Merchant Header */}
             <div className="flex items-center gap-3 mb-8">
               <h2 className="text-xl font-semibold text-ocean-deep">{merchant.brandName}</h2>
-              {merchant.paused && (
+              {isPaused && (
                 <span className="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-700">
                   Paused
                 </span>
@@ -178,24 +180,24 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-ocean-foam/30 bg-white p-6">
                 <h3 className="text-lg font-semibold text-ocean-deep mb-2">Merchant Status</h3>
                 <p className="text-sm text-ocean-ink mb-4">
-                  {merchant.paused ? 'Merchant is paused — no payments accepted' : 'Merchant is active'}
+                  {isPaused ? 'Merchant is paused — no payments accepted' : 'Merchant is active'}
                 </p>
                 <button
                   onClick={() =>
                     executeAdminTx(() =>
-                      merchant.paused
+                      isPaused
                         ? buildSelfUnpause(DEMO_CONFIG, MERCHANT_CAP_ID)
                         : buildSelfPause(DEMO_CONFIG, MERCHANT_CAP_ID)
                     )
                   }
                   disabled={actionStatus !== 'idle' && actionStatus !== 'error' && actionStatus !== 'rejected'}
                   className={`rounded-xl px-6 py-2.5 text-sm font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                    merchant.paused
+                    isPaused
                       ? 'bg-emerald-500 text-white'
                       : 'bg-amber-500 text-white'
                   }`}
                 >
-                  {merchant.paused ? 'Unpause' : 'Pause'}
+                  {isPaused ? 'Unpause' : 'Pause'}
                 </button>
               </div>
             </div>

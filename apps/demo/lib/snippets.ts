@@ -77,7 +77,8 @@ function CheckoutButton() {
 const merchant = await fs.getMerchant()
 console.log(merchant.totalReceived)  // bigint
 console.log(merchant.accruedYield)   // bigint
-console.log(merchant.paused)         // boolean
+console.log(merchant.pausedByAdmin)  // boolean
+console.log(merchant.pausedBySelf)   // boolean
 
 // React hook
 const { merchant, isLoading } = useMerchant()

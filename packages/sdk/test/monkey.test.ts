@@ -322,7 +322,8 @@ describe('Monkey: Query edge cases', () => {
     expect(info.brandName).toBe('')
     expect(info.totalReceived).toBe(0n)
     expect(info.activeSubscriptions).toBe(0)
-    expect(info.paused).toBe(false)
+    expect(info.pausedByAdmin).toBe(false)
+    expect(info.pausedBySelf).toBe(false)
   })
 })
 

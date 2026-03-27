@@ -22,7 +22,8 @@ vi.mock('@mysten/sui/grpc', () => {
             idle_principal: '500',
             accrued_yield: '50',
             active_subscriptions: 2,
-            paused: false,
+            paused_by_admin: false,
+            paused_by_self: false,
             balance: '2000',
           },
         },
@@ -104,6 +105,7 @@ const testConfig = {
   network: 'testnet' as const,
   packageId: '0xpkg123',
   merchantId: '0xmerchant456',
+  yieldVaultId: '0xyieldvault789',
 }
 
 function wrapper({ children }: { children: ReactNode }) {

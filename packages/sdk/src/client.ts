@@ -154,8 +154,8 @@ export class FloatSync {
     return { tx: buildRegisterMerchant(this.config, params) }
   }
 
-  /** Build a claim_yield transaction. Requires MerchantCap. */
-  claimYield(merchantCapId: string, coinType?: string): TransactionResult {
+  /** Build a claim_yield_v2 transaction (router module). Requires MerchantCap + coinType. */
+  claimYield(merchantCapId: string, coinType: string): TransactionResult {
     return { tx: buildClaimYield(this.config, merchantCapId, coinType) }
   }
 
@@ -335,7 +335,8 @@ function deserializeMerchant(id: string, fields: Record<string, unknown>): Merch
     idlePrincipal: BigInt(String(fields.idle_principal ?? '0')),
     accruedYield: BigInt(String(fields.accrued_yield ?? '0')),
     activeSubscriptions: Number(fields.active_subscriptions ?? 0),
-    paused: Boolean(fields.paused),
+    pausedByAdmin: Boolean(fields.paused_by_admin),
+    pausedBySelf: Boolean(fields.paused_by_self),
   }
 }
 

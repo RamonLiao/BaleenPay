@@ -47,10 +47,10 @@ export function MerchantBadge({
     <div
       className={className}
       data-floatsync="merchant-badge"
-      data-paused={merchant.paused || undefined}
+      data-paused={merchant.pausedByAdmin || merchant.pausedBySelf || undefined}
     >
       <span data-floatsync="brand">{merchant.brandName}</span>
-      <span data-floatsync="status">{merchant.paused ? 'Paused' : 'Active'}</span>
+      <span data-floatsync="status">{merchant.pausedByAdmin || merchant.pausedBySelf ? 'Paused' : 'Active'}</span>
       <span data-floatsync="total">{merchant.totalReceived.toString()}</span>
       <span data-floatsync="subscriptions">{merchant.activeSubscriptions}</span>
     </div>
