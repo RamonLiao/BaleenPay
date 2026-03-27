@@ -1,5 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import type { FloatSyncConfig, FundParams, ObjectId } from '../types.js'
 import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 import { prepareCoin } from '../coins/helper.js'
@@ -41,7 +41,7 @@ export function buildCancelSubscription(
 }
 
 export async function buildFundSubscription(
-  client: SuiJsonRpcClient,
+  client: SuiGrpcClient,
   config: FloatSyncConfig,
   params: FundParams,
   sender: string,
@@ -56,6 +56,7 @@ export async function buildFundSubscription(
     target: `${config.packageId}::payment::fund_subscription`,
     typeArguments: [coinTypeArg(coinConfig.type)],
     arguments: [
+      tx.object(config.merchantId),
       tx.object(params.subscriptionId),
       fundCoin,
     ],
