@@ -8,6 +8,7 @@ import type {
   SubscriptionInfo,
   FloatSyncEventData,
   ObjectId,
+  YieldInfo,
 } from '@floatsync/sdk'
 
 export interface FloatSyncProviderProps {
@@ -88,6 +89,46 @@ export interface UsePaymentHistoryReturn {
   refetch: () => void
 }
 
+// ── useYieldInfo ──
+
+export interface UseYieldInfoReturn {
+  yieldInfo: YieldInfo | undefined
+  isLoading: boolean
+  error: Error | null
+  refetch: () => void
+}
+
+// ── useYieldHistory ──
+
+export interface YieldDataPoint {
+  timestamp: number
+  cumulativeYield: number
+  apy: number
+}
+
+export interface ClaimEvent {
+  timestamp: number
+  amount: bigint
+  txDigest: string
+}
+
+export interface UseYieldHistoryReturn {
+  dataPoints: YieldDataPoint[]
+  claimEvents: ClaimEvent[]
+  isLoading: boolean
+  error: Error | null
+}
+
+// ── useClaimYield ──
+
+export interface UseClaimYieldReturn {
+  claim: (merchantCapId: string) => Promise<void>
+  status: MutationStatus
+  error: Error | null
+  txDigest: string | null
+  reset: () => void
+}
+
 // ── Component props ──
 
 export interface CheckoutButtonProps {
@@ -140,4 +181,5 @@ export type {
   SubscriptionInfo,
   FloatSyncEventData,
   ObjectId,
+  YieldInfo,
 }

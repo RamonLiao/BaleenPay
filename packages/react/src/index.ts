@@ -7,6 +7,9 @@ export { usePayment } from './hooks/usePayment.js'
 export { useSubscription } from './hooks/useSubscription.js'
 export { useMerchant } from './hooks/useMerchant.js'
 export { usePaymentHistory } from './hooks/usePaymentHistory.js'
+export { useYieldInfo } from './hooks/useYieldInfo.js'
+export { useYieldHistory } from './hooks/useYieldHistory.js'
+export { useClaimYield } from './hooks/useClaimYield.js'
 
 // Components
 export { CheckoutButton } from './components/CheckoutButton.js'
@@ -26,6 +29,12 @@ export type {
   UseMerchantReturn,
   UsePaymentHistoryOptions,
   UsePaymentHistoryReturn,
+  UseYieldInfoReturn,
+  UseYieldHistoryReturn,
+  UseClaimYieldReturn,
+  YieldDataPoint,
+  ClaimEvent,
+  YieldInfo,
   CheckoutButtonProps,
   PaymentFormProps,
   SubscribeButtonProps,
