@@ -1,8 +1,10 @@
 // packages/sdk/src/events/stream.ts
 
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiGraphQLClient } from '@mysten/sui/graphql'
 import type { EventCallback, FloatSyncEventData, FloatSyncEventName, Unsubscribe } from '../types.js'
 import { normalizeEvent } from './types.js'
+import { QUERY_EVENTS } from './queries.js'
+import type { QueryEventsResult } from './queries.js'
 
 interface ListenerEntry {
   callback: EventCallback
@@ -15,7 +17,7 @@ export class EventStream {
   private packageId: string
   private listeners: Map<string, Set<ListenerEntry>> = new Map()
   private pollTimer?: ReturnType<typeof setInterval>
-  private cursor?: { txDigest: string; eventSeq: string }
+  private cursor?: string | null
 
   constructor(packageId: string) {
     this.packageId = packageId
@@ -39,33 +41,41 @@ export class EventStream {
   }
 
   /**
-   * Start polling for on-chain events.
-   * Uses queryEvents with cursor tracking (subscribeEvent removed in @mysten/sui v2).
+   * Start polling for on-chain events via GraphQL.
+   * Uses cursor tracking to only receive new events.
    */
-  async start(client: SuiJsonRpcClient, intervalMs = DEFAULT_POLL_INTERVAL_MS): Promise<void> {
+  async start(client: SuiGraphQLClient, intervalMs = DEFAULT_POLL_INTERVAL_MS): Promise<void> {
     // Seed cursor from latest event so we only see new events
-    const seed = await client.queryEvents({
-      query: { MoveEventModule: { package: this.packageId, module: 'events' } },
-      limit: 1,
-      order: 'descending',
+    const eventType = `${this.packageId}::events`
+    const seed = await client.query<QueryEventsResult>({
+      query: QUERY_EVENTS,
+      variables: { type: eventType, first: 1 },
     })
-    if (seed.data.length > 0) {
-      this.cursor = { txDigest: seed.data[0].id.txDigest, eventSeq: seed.data[0].id.eventSeq }
+    if (seed.data?.events.nodes.length) {
+      this.cursor = seed.data.events.pageInfo.endCursor
     }
 
     this.pollTimer = setInterval(async () => {
       try {
-        const result = await client.queryEvents({
-          query: { MoveEventModule: { package: this.packageId, module: 'events' } },
-          cursor: this.cursor ?? undefined,
-          limit: 50,
-          order: 'ascending',
+        const result = await client.query<QueryEventsResult>({
+          query: QUERY_EVENTS,
+          variables: {
+            type: eventType,
+            after: this.cursor ?? undefined,
+            first: 50,
+          },
         })
 
-        for (const evt of result.data) {
-          const data = normalizeEvent(evt.type, evt.parsedJson as Record<string, unknown>)
+        if (!result.data) return
+
+        for (const node of result.data.events.nodes) {
+          if (!node.type?.repr || !node.contents?.json) continue
+          const data = normalizeEvent(node.type.repr, node.contents.json)
           this.dispatch(data)
-          this.cursor = { txDigest: evt.id.txDigest, eventSeq: evt.id.eventSeq }
+        }
+
+        if (result.data.events.pageInfo.endCursor) {
+          this.cursor = result.data.events.pageInfo.endCursor
         }
       } catch {
         // Silently skip poll errors — next interval will retry
