@@ -8,6 +8,7 @@ module floatsync::payment {
     use std::type_name;
     use std::string::String;
     use floatsync::merchant::MerchantCap;
+    use floatsync::router::{Self, Vault, RouterConfig};
 
     // ── Error codes (spec §3.8) ──
     const EPaused: u64 = 2;
@@ -139,6 +140,49 @@ module floatsync::payment {
             ctx.sender(),
             amount,
             0,
+            now,
+            key.order_id,
+            coin_type,
+        );
+    }
+
+    /// Router-aware one-time payment. Routes coin to Vault when mode=stablelayer.
+    /// SDK calls this only when router mode=1. For mode=0, SDK uses pay_once_v2 directly.
+    public fun pay_once_routed<T>(
+        config: &RouterConfig,
+        account: &mut MerchantAccount,
+        vault: &mut Vault<T>,
+        coin: Coin<T>,
+        order_id: String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        validate_order_id(&order_id);
+        let key = OrderKey { payer: ctx.sender(), order_id };
+        assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
+        assert!(!merchant::get_paused(account), EPaused);
+
+        let amount = coin.value();
+        assert!(amount > 0, EZeroAmount);
+
+        let now = clock.timestamp_ms();
+        let coin_type = type_name::get<T>().into_string().to_string();
+
+        // Record order for dedup
+        df::add(merchant::uid_mut(account), key, OrderRecord {
+            amount,
+            timestamp_ms: now,
+            coin_type,
+        });
+
+        // Route to vault (asserts mode==stablelayer inside)
+        router::route_payment(config, account, vault, coin, clock, ctx);
+
+        events::emit_payment_received_v2(
+            object::id(account),
+            ctx.sender(),
+            amount,
+            0, // payment_type: one-time
             now,
             key.order_id,
             coin_type,
