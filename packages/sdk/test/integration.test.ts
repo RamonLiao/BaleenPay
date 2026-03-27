@@ -107,7 +107,8 @@ describe('Integration: Full merchant lifecycle (V2)', () => {
           idle_principal: '800000',
           accrued_yield: '10000',
           active_subscriptions: 1,
-          paused: false,
+          paused_by_admin: false,
+          paused_by_self: false,
         },
       },
     })

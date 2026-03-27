@@ -31,13 +31,13 @@ describe('buildSelfPause', () => {
 })
 
 describe('buildClaimYield', () => {
-  it('creates a valid transaction', () => {
-    const tx = buildClaimYield(config, '0xcap')
+  it('creates a valid transaction with yieldVaultId + coinType', () => {
+    const withYv = { ...config, yieldVaultId: '0xYV' }
+    const tx = buildClaimYield(withYv, '0xcap', 'USDC')
     expect(tx).toBeDefined()
   })
 
-  it('throws without routerConfigId', () => {
-    const noRouter = { ...config, routerConfigId: undefined }
-    expect(() => buildClaimYield(noRouter, '0xcap')).toThrow('routerConfigId')
+  it('throws without yieldVaultId', () => {
+    expect(() => buildClaimYield(config, '0xcap', 'USDC')).toThrow('yieldVaultId')
   })
 })

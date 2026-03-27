@@ -1,8 +1,13 @@
 // packages/sdk/src/admin.ts
 
 import { Transaction } from '@mysten/sui/transactions'
-import type { FloatSyncConfig, TransactionResult, ObjectId } from './types.js'
+import type { FloatSyncConfig, TransactionResult, ObjectId, KeeperParams } from './types.js'
 import { ValidationError } from './errors.js'
+import {
+  buildKeeperWithdraw,
+  buildKeeperDeposit,
+  buildKeeperHarvest,
+} from './transactions/keeper.js'
 
 /**
  * AdminClient for protocol-level admin operations.
@@ -77,5 +82,20 @@ export class AdminClient {
       ],
     })
     return { tx }
+  }
+
+  /** Build a keeper_withdraw PTB. */
+  keeperWithdraw(keeper: KeeperParams, amount: bigint, coinType: string): TransactionResult {
+    return { tx: buildKeeperWithdraw(this.config, keeper, amount, coinType) }
+  }
+
+  /** Build composite keeper deposit PTB (withdraw → StableLayer mint). */
+  keeperDeposit(keeper: KeeperParams, amount: bigint, coinType: string): TransactionResult {
+    return { tx: buildKeeperDeposit(this.config, keeper, amount, coinType) }
+  }
+
+  /** Build composite keeper harvest PTB (StableLayer claim → deposit yield). */
+  keeperHarvest(keeper: KeeperParams, merchantId: string, yieldCoinType: string): TransactionResult {
+    return { tx: buildKeeperHarvest(this.config, keeper, merchantId, yieldCoinType) }
   }
 }

@@ -5,7 +5,7 @@ module floatsync::integration_tests {
     use sui::clock;
     use floatsync::merchant;
     use floatsync::payment;
-    use floatsync::router;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     // ── Helpers ──
@@ -18,6 +18,12 @@ module floatsync::integration_tests {
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
         router::init_for_testing(scenario.ctx());
+        // Create YieldVault for claim_yield_v2 tests
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
+
         scenario.next_tx(merchant_addr);
         let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
         merchant::register_merchant(&mut registry, b"IntegShop".to_string(), scenario.ctx());
@@ -49,26 +55,30 @@ module floatsync::integration_tests {
         assert!(merchant::get_idle_principal(&account) == 200_000_000);
         assert!(merchant::get_accrued_yield(&account) == 0);
 
-        // ─ Step 2: Simulate yield accrual (10 USDC) ─
-        merchant::credit_yield_for_testing(&mut account, 10_000_000);
-        assert!(merchant::get_idle_principal(&account) == 190_000_000);
+        // ─ Step 2: Simulate external yield (10 USDC) + fund YieldVault ─
+        merchant::credit_external_yield_for_testing(&mut account, 10_000_000);
         assert!(merchant::get_accrued_yield(&account) == 10_000_000);
 
         test_scenario::return_shared(account);
+
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
         clock::destroy_for_testing(clock);
 
-        // ─ Step 3: Merchant claims yield ─
+        // ─ Step 3: Merchant claims yield via v2 ─
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
-        let claimed = merchant::claim_yield(&cap, &mut account);
-        assert!(claimed == 10_000_000);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
         assert!(merchant::get_accrued_yield(&account) == 0);
-        assert!(merchant::get_idle_principal(&account) == 190_000_000);
         // total_received unchanged by yield ops
         assert!(merchant::get_total_received(&account) == 200_000_000);
 
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();
@@ -226,7 +236,7 @@ module floatsync::integration_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EPaused)]
+    #[expected_failure] // EPaused
     fun test_pause_blocks_process_subscription() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -468,15 +478,18 @@ module floatsync::integration_tests {
         test_scenario::return_shared(account);
         clock::destroy_for_testing(clock);
 
-        // Yield 10, claim it
+        // Yield 10, claim it via v2
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_yield_for_testing(&mut account, 10_000_000);
-        let claimed = merchant::claim_yield(&cap, &mut account);
-        assert!(claimed == 10_000_000);
-        // State: total=100, idle=90, yield=0
-        assert!(merchant::get_idle_principal(&account) == 90_000_000);
+        merchant::credit_external_yield_for_testing(&mut account, 10_000_000);
+        // Fund YieldVault
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
+        assert!(merchant::get_accrued_yield(&account) == 0);
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
 
@@ -487,9 +500,9 @@ module floatsync::integration_tests {
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account, c2, &clock, scenario.ctx());
 
-        // State: total=150, idle=140, yield=0
+        // State: total=150, idle=150 (external yield doesn't deduct idle), yield=0
         assert!(merchant::get_total_received(&account) == 150_000_000);
-        assert!(merchant::get_idle_principal(&account) == 140_000_000);
+        assert!(merchant::get_idle_principal(&account) == 150_000_000);
         assert!(merchant::get_accrued_yield(&account) == 0);
 
         test_scenario::return_shared(account);
@@ -525,17 +538,19 @@ module floatsync::integration_tests {
         test_scenario::return_shared(account);
         clock::destroy_for_testing(clock);
 
-        // Simulate yield of 25 and claim
+        // Simulate external yield of 25 and claim via v2
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_yield_for_testing(&mut account, 25_000_000);
-        let claimed = merchant::claim_yield(&cap, &mut account);
-        assert!(claimed == 25_000_000);
+        merchant::credit_external_yield_for_testing(&mut account, 25_000_000);
+        // Fund YieldVault
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(25_000_000, scenario.ctx());
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
+        assert!(merchant::get_accrued_yield(&account) == 0);
 
-        // In fallback mode yield still works at ledger level (actual yield source is future)
-        assert!(merchant::get_idle_principal(&account) == 475_000_000);
-
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();

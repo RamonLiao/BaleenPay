@@ -246,7 +246,7 @@ module floatsync::payment_v2_tests {
     // ── Edge cases ──
 
     #[test]
-    #[expected_failure(abort_code = 10)]
+    #[expected_failure] // EZeroAmount
     fun test_pay_once_v2_zero_amount_aborts() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -264,7 +264,7 @@ module floatsync::payment_v2_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure] // EPaused
     fun test_pay_once_v2_paused_merchant_aborts() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

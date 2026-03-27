@@ -68,7 +68,8 @@ describe('FloatSync client', () => {
     })
 
     it('claimYield returns tx', () => {
-      const result = client.claimYield('0xcap')
+      const c = new FloatSync({ ...baseConfig, yieldVaultId: '0xYV' })
+      const result = c.claimYield('0xcap', 'USDC')
       expect(result.tx).toBeDefined()
     })
 
@@ -127,7 +128,8 @@ describe('FloatSync client', () => {
             idle_principal: '500000',
             accrued_yield: '50000',
             active_subscriptions: 3,
-            paused: false,
+            paused_by_admin: false,
+            paused_by_self: false,
           },
         },
       })
@@ -140,7 +142,8 @@ describe('FloatSync client', () => {
       expect(info.idlePrincipal).toBe(500000n)
       expect(info.accruedYield).toBe(50000n)
       expect(info.activeSubscriptions).toBe(3)
-      expect(info.paused).toBe(false)
+      expect(info.pausedByAdmin).toBe(false)
+      expect(info.pausedBySelf).toBe(false)
     })
 
     it('queries custom merchantId', async () => {
@@ -149,7 +152,7 @@ describe('FloatSync client', () => {
         object: {
           json: {
             owner: '0x1', brand_name: 'X', total_received: '0',
-            idle_principal: '0', accrued_yield: '0', active_subscriptions: 0, paused: false,
+            idle_principal: '0', accrued_yield: '0', active_subscriptions: 0, paused_by_admin: false, paused_by_self: false,
           },
         },
       })

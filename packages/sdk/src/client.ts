@@ -26,7 +26,8 @@ import { IdempotencyGuard } from './idempotency.js'
 import { EventStream } from './events/stream.js'
 import { detectVersion } from './version.js'
 import type { VersionInfo } from './version.js'
-import { buildPayOnceV2, buildPayOnce } from './transactions/pay.js'
+import { buildPayOnceV2, buildPayOnce, buildPayOnceRouted } from './transactions/pay.js'
+import type { YieldInfo } from './types.js'
 import { buildSubscribeV2, buildSubscribe } from './transactions/subscribe.js'
 import { buildRegisterMerchant, buildSelfPause, buildSelfUnpause } from './transactions/merchant.js'
 import { buildClaimYield } from './transactions/yield.js'
@@ -153,9 +154,63 @@ export class FloatSync {
     return { tx: buildRegisterMerchant(this.config, params) }
   }
 
-  /** Build a claim_yield transaction. Requires MerchantCap. */
-  claimYield(merchantCapId: string): TransactionResult {
-    return { tx: buildClaimYield(this.config, merchantCapId) }
+  /** Build a claim_yield_v2 transaction (router module). Requires MerchantCap + coinType. */
+  claimYield(merchantCapId: string, coinType: string): TransactionResult {
+    return { tx: buildClaimYield(this.config, merchantCapId, coinType) }
+  }
+
+  /**
+   * Build a pay_once_routed transaction (StableLayer mode).
+   * Routes payment to Vault. Use when router mode = 1.
+   */
+  async payRouted(params: PayParams, sender: string): Promise<TransactionResult> {
+    const key = IdempotencyGuard.key(this.config.merchantId, params.orderId)
+    const existing = this.idempotency.check(key)
+    if (existing === 'pending') {
+      throw new ValidationError('DUPLICATE_PENDING', `Payment for order "${params.orderId}" is already in progress`)
+    }
+
+    this.idempotency.markPending(key)
+    try {
+      const tx = await buildPayOnceRouted(this.grpcClient, this.config, params, sender)
+      return { tx }
+    } catch (err) {
+      this.idempotency.remove(key)
+      throw err
+    }
+  }
+
+  /**
+   * Query yield info for a merchant.
+   * Combines on-chain MerchantAccount data with vault balance.
+   */
+  async getYieldInfo(merchantId?: ObjectId): Promise<YieldInfo> {
+    const id = merchantId ?? this.config.merchantId
+    const merchant = await this.getMerchant(id)
+
+    let vaultBalance = 0n
+    if (this.config.vaultId) {
+      try {
+        const { object } = await this.grpcClient.getObject({
+          objectId: this.config.vaultId,
+          include: { json: true },
+        })
+        if (object?.json) {
+          const fields = object.json as Record<string, unknown>
+          vaultBalance = BigInt(String(fields.balance ?? '0'))
+        }
+      } catch {
+        // Vault query failed — non-fatal
+      }
+    }
+
+    return {
+      idlePrincipal: merchant.idlePrincipal,
+      accruedYield: merchant.accruedYield,
+      claimableUsdb: merchant.accruedYield, // MVP: same as accruedYield
+      estimatedApy: 0, // Calculated by React hook from event history
+      vaultBalance,
+    }
   }
 
   /** Build a self_pause transaction. Requires MerchantCap. */
@@ -280,7 +335,8 @@ function deserializeMerchant(id: string, fields: Record<string, unknown>): Merch
     idlePrincipal: BigInt(String(fields.idle_principal ?? '0')),
     accruedYield: BigInt(String(fields.accrued_yield ?? '0')),
     activeSubscriptions: Number(fields.active_subscriptions ?? 0),
-    paused: Boolean(fields.paused),
+    pausedByAdmin: Boolean(fields.paused_by_admin),
+    pausedBySelf: Boolean(fields.paused_by_self),
   }
 }
 

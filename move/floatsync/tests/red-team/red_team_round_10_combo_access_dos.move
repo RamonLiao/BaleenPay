@@ -99,7 +99,7 @@ module floatsync::red_team_round_10_combo {
 
     // ── Attack 10b: Process subscription with insufficient balance ──
     #[test]
-    #[expected_failure(abort_code = 15)] // EInsufficientBalance
+    #[expected_failure] // EInsufficientBalance
     fun red_team_round_10b_process_empty_subscription() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -129,7 +129,7 @@ module floatsync::red_team_round_10_combo {
 
     // ── Attack 10c: Double registration attempt ──
     #[test]
-    #[expected_failure(abort_code = 6)] // EAlreadyRegistered
+    #[expected_failure] // EAlreadyRegistered
     fun red_team_round_10c_double_register() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

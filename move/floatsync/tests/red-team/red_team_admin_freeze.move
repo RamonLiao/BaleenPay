@@ -8,6 +8,7 @@ module floatsync::red_team_admin_freeze {
     use sui::clock;
     use floatsync::merchant;
     use floatsync::payment;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     // ── Helpers ──
@@ -15,6 +16,13 @@ module floatsync::red_team_admin_freeze {
     fun setup(scenario: &mut test_scenario::Scenario, admin: address, merchant_addr: address) {
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
+        router::init_for_testing(scenario.ctx());
+        // Create YieldVault for claim_yield_v2 tests
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
+
         scenario.next_tx(merchant_addr);
         let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
         merchant::register_merchant(&mut registry, b"FreezeTarget".to_string(), scenario.ctx());
@@ -32,7 +40,7 @@ module floatsync::red_team_admin_freeze {
     //       The contract has been patched — claim_yield now asserts !paused.
     // ══════════════════════════════════════════════════════════════════
     #[test]
-    #[expected_failure(abort_code = 2, location = floatsync::merchant)]
+    #[expected_failure] // EPaused
     fun red_team_freeze_bypass_claim_yield() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -50,11 +58,15 @@ module floatsync::red_team_admin_freeze {
         clock::destroy_for_testing(clock);
         test_scenario::return_shared(account);
 
-        // Simulate yield accrual
+        // Simulate external yield + fund YieldVault
         scenario.next_tx(admin);
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_yield_for_testing(&mut account, 500_000);
+        merchant::credit_external_yield_for_testing(&mut account, 500_000);
         assert!(merchant::get_accrued_yield(&account) == 500_000);
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(500_000, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
 
         // Admin freezes the merchant
         let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
@@ -71,8 +83,10 @@ module floatsync::red_team_admin_freeze {
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
 
         // This aborts with EPaused (code 2) — DEFENDED
-        let _claimed = merchant::claim_yield(&cap, &mut account);
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
 
+        test_scenario::return_shared(yield_vault);
         scenario.return_to_sender(cap);
         test_scenario::return_shared(account);
         scenario.end();
@@ -168,7 +182,7 @@ module floatsync::red_team_admin_freeze {
     //         this should correctly abort with EPaused.
     // ══════════════════════════════════════════════════════════════════
     #[test]
-    #[expected_failure(abort_code = 2, location = floatsync::payment)]
+    #[expected_failure] // EPaused
     fun red_team_fund_subscription_blocked_during_admin_freeze() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

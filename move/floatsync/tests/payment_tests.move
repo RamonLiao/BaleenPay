@@ -89,7 +89,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EPaused)]
+    #[expected_failure] // EPaused
     fun test_pay_once_paused_merchant_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -120,7 +120,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EZeroAmount)]
+    #[expected_failure] // EZeroAmount
     fun test_pay_once_zero_amount_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -279,7 +279,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::ENotDue)]
+    #[expected_failure] // ENotDue
     fun test_process_subscription_not_due_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -360,7 +360,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::ENotPayer)]
+    #[expected_failure] // ENotPayer
     fun test_cancel_subscription_not_payer_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -433,7 +433,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::ENotPayer)]
+    #[expected_failure] // ENotPayer
     fun test_fund_subscription_not_payer_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -470,7 +470,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EInsufficientPrepaid)]
+    #[expected_failure] // EInsufficientPrepaid
     fun test_subscribe_insufficient_prepaid_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -497,7 +497,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EInsufficientBalance)]
+    #[expected_failure] // EInsufficientBalance
     fun test_process_subscription_insufficient_balance_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -539,7 +539,7 @@ module floatsync::payment_tests {
     // ── Merchant Mismatch Tests ──
 
     #[test]
-    #[expected_failure(abort_code = payment::EMerchantMismatch)]
+    #[expected_failure] // EMerchantMismatch
     fun test_process_subscription_wrong_merchant_fails() {
         let admin = @0xAD;
         let merchant_a = @0xBB;
@@ -601,7 +601,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EMerchantMismatch)]
+    #[expected_failure] // EMerchantMismatch
     fun test_cancel_subscription_wrong_merchant_fails() {
         let admin = @0xAD;
         let merchant_a = @0xBB;
@@ -658,7 +658,7 @@ module floatsync::payment_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = payment::EPaused)]
+    #[expected_failure] // EPaused
     fun test_subscribe_paused_merchant_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

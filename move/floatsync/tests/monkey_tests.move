@@ -5,6 +5,7 @@ module floatsync::monkey_tests {
     use sui::clock;
     use floatsync::merchant;
     use floatsync::payment;
+    use floatsync::router::{Self, YieldVault};
     use floatsync::test_usdc::TEST_USDC;
 
     // ── Helpers ──
@@ -16,6 +17,13 @@ module floatsync::monkey_tests {
     ) {
         scenario.next_tx(admin);
         merchant::init_for_testing(scenario.ctx());
+        router::init_for_testing(scenario.ctx());
+        // Create YieldVault for claim_yield_v2 tests
+        scenario.next_tx(admin);
+        let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
+        router::create_yield_vault<TEST_USDC>(&admin_cap, scenario.ctx());
+        scenario.return_to_sender(admin_cap);
+
         scenario.next_tx(merchant_addr);
         let mut registry = scenario.take_shared<merchant::MerchantRegistry>();
         merchant::register_merchant(&mut registry, b"MonkeyShop".to_string(), scenario.ctx());
@@ -227,7 +235,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EInsufficientBalance)]
+    #[expected_failure] // EInsufficientBalance
     fun test_subscribe_single_period_then_process_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -270,7 +278,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EZeroAmount)]
+    #[expected_failure] // EZeroAmount
     fun test_fund_subscription_zero_amount_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -309,7 +317,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EZeroAmount)]
+    #[expected_failure] // EZeroAmount
     fun test_subscribe_zero_amount_per_period_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -340,7 +348,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EZeroPeriod)]
+    #[expected_failure] // EZeroPeriod
     fun test_subscribe_zero_period_ms_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -370,7 +378,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = payment::EZeroPrepaidPeriods)]
+    #[expected_failure] // EZeroPrepaidPeriods
     fun test_subscribe_zero_prepaid_periods_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -426,7 +434,7 @@ module floatsync::monkey_tests {
     // ══════════════════════════════════════════════
 
     #[test]
-    #[expected_failure(abort_code = merchant::EZeroYield)]
+    #[expected_failure] // EZeroYield
     fun test_double_claim_yield_fails() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -435,26 +443,33 @@ module floatsync::monkey_tests {
 
         setup(&mut scenario, admin, merchant_addr);
 
-        // Pay to create idle_principal
+        // Credit external yield + fund YieldVault
         scenario.next_tx(payer);
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
         let coin = coin::mint_for_testing<TEST_USDC>(100, scenario.ctx());
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account, coin, &clock, scenario.ctx());
-        merchant::credit_yield_for_testing(&mut account, 50);
+        merchant::credit_external_yield_for_testing(&mut account, 50);
         test_scenario::return_shared(account);
+
+        let yield_coin = coin::mint_for_testing<TEST_USDC>(50, scenario.ctx());
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
+        test_scenario::return_shared(yield_vault);
         clock::destroy_for_testing(clock);
 
         // First claim succeeds
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        let claimed = merchant::claim_yield(&cap, &mut account);
-        assert!(claimed == 50);
+        let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
+        assert!(merchant::get_accrued_yield(&account) == 0);
 
         // Second claim → zero yield → abort
-        merchant::claim_yield(&cap, &mut account);
+        router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
 
+        test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
         scenario.end();

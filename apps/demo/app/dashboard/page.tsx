@@ -1,6 +1,6 @@
 'use client'
 
-import { useMerchant, usePaymentHistory } from '@floatsync/react'
+import { useMerchant, usePaymentHistory, useYieldInfo, useYieldHistory, useClaimYield } from '@floatsync/react'
 import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
 import { buildClaimYield, buildSelfPause, buildSelfUnpause } from '@floatsync/sdk'
 import { useState } from 'react'
@@ -8,6 +8,8 @@ import { WalletGuard } from '@/components/WalletGuard'
 import { TxStatus } from '@/components/TxStatus'
 import { StatCard } from '@/components/StatCard'
 import { PaymentTable } from '@/components/PaymentTable'
+import { YieldChart } from '@/components/YieldChart'
+import { ClaimHistory } from '@/components/ClaimHistory'
 import { DEMO_CONFIG, MERCHANT_CAP_ID } from '@/lib/config'
 import { formatAmount } from '@/lib/format'
 import type { MutationStatus } from '@floatsync/react'
@@ -17,6 +19,11 @@ export default function DashboardPage() {
   const dAppKit = useDAppKit()
   const { merchant, isLoading: merchantLoading, refetch: refetchMerchant } = useMerchant()
   const { events, isLoading: historyLoading, hasNextPage, fetchNextPage } = usePaymentHistory()
+  const { yieldInfo, isLoading: yieldInfoLoading } = useYieldInfo()
+  const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistory()
+  const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYield()
+
+  const isPaused = merchant?.pausedByAdmin || merchant?.pausedBySelf || false
 
   // Admin action state
   const [actionStatus, setActionStatus] = useState<MutationStatus>('idle')
@@ -73,7 +80,7 @@ export default function DashboardPage() {
             {/* Merchant Header */}
             <div className="flex items-center gap-3 mb-8">
               <h2 className="text-xl font-semibold text-ocean-deep">{merchant.brandName}</h2>
-              {merchant.paused && (
+              {isPaused && (
                 <span className="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-700">
                   Paused
                 </span>
@@ -103,45 +110,94 @@ export default function DashboardPage() {
               />
             </div>
 
+            {/* ── Yield Section ── */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-ocean-deep mb-4">Yield Overview</h3>
+
+              {/* Yield Stat Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <StatCard
+                  label="Accrued Yield"
+                  value={yieldInfoLoading ? '...' : formatAmount(yieldInfo?.accruedYield ?? 0n)}
+                  sub="Claimable now"
+                />
+                <StatCard
+                  label="Vault Balance"
+                  value={yieldInfoLoading ? '...' : formatAmount(yieldInfo?.vaultBalance ?? 0n)}
+                  sub="In StableLayer"
+                />
+                <StatCard
+                  label="Est. APY"
+                  value={yieldInfoLoading ? '...' : `${(yieldInfo?.estimatedApy ?? 0).toFixed(2)}%`}
+                />
+              </div>
+
+              {/* Chart */}
+              <div className="mb-4">
+                <YieldChart dataPoints={dataPoints} isLoading={yieldHistoryLoading} />
+              </div>
+
+              {/* Claim + History side by side */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Claim Card */}
+                <div className="rounded-2xl border border-ocean-foam/30 bg-white p-6 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-ocean-deep mb-2">Claim Yield</h4>
+                    <p className="text-sm text-ocean-ink mb-4">
+                      Accrued: {formatAmount(yieldInfo?.accruedYield ?? merchant.accruedYield)} MIST
+                    </p>
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => claimYield(MERCHANT_CAP_ID)}
+                      disabled={
+                        (yieldInfo?.accruedYield ?? merchant.accruedYield) === 0n ||
+                        (claimStatus !== 'idle' && claimStatus !== 'error' && claimStatus !== 'rejected' && claimStatus !== 'success')
+                      }
+                      className="rounded-xl bg-gradient-to-r from-ocean-water to-ocean-teal px-6 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {claimStatus === 'building' || claimStatus === 'signing' || claimStatus === 'confirming'
+                        ? 'Claiming...'
+                        : 'Claim Yield'}
+                    </button>
+                    {claimStatus !== 'idle' && (
+                      <div className="mt-3">
+                        <TxStatus status={claimStatus} error={claimError} digest={claimDigest} onReset={resetClaim} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Claim History */}
+                <ClaimHistory claimEvents={claimEvents} isLoading={yieldHistoryLoading} />
+              </div>
+            </div>
+
             {/* Admin Actions */}
             <div className="grid md:grid-cols-2 gap-4 mb-8">
-              {/* Yield Card */}
-              <div className="rounded-2xl border border-ocean-foam/30 bg-white p-6">
-                <h3 className="text-lg font-semibold text-ocean-deep mb-2">Claim Yield</h3>
-                <p className="text-sm text-ocean-ink mb-4">
-                  Accrued: {formatAmount(merchant.accruedYield)} MIST
-                </p>
-                <button
-                  onClick={() => executeAdminTx(() => buildClaimYield(DEMO_CONFIG, MERCHANT_CAP_ID))}
-                  disabled={merchant.accruedYield === 0n || (actionStatus !== 'idle' && actionStatus !== 'error' && actionStatus !== 'rejected')}
-                  className="rounded-xl bg-gradient-to-r from-ocean-water to-ocean-teal px-6 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Claim Yield
-                </button>
-              </div>
 
               {/* Pause Toggle */}
               <div className="rounded-2xl border border-ocean-foam/30 bg-white p-6">
                 <h3 className="text-lg font-semibold text-ocean-deep mb-2">Merchant Status</h3>
                 <p className="text-sm text-ocean-ink mb-4">
-                  {merchant.paused ? 'Merchant is paused — no payments accepted' : 'Merchant is active'}
+                  {isPaused ? 'Merchant is paused — no payments accepted' : 'Merchant is active'}
                 </p>
                 <button
                   onClick={() =>
                     executeAdminTx(() =>
-                      merchant.paused
+                      isPaused
                         ? buildSelfUnpause(DEMO_CONFIG, MERCHANT_CAP_ID)
                         : buildSelfPause(DEMO_CONFIG, MERCHANT_CAP_ID)
                     )
                   }
                   disabled={actionStatus !== 'idle' && actionStatus !== 'error' && actionStatus !== 'rejected'}
                   className={`rounded-xl px-6 py-2.5 text-sm font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                    merchant.paused
+                    isPaused
                       ? 'bg-emerald-500 text-white'
                       : 'bg-amber-500 text-white'
                   }`}
                 >
-                  {merchant.paused ? 'Unpause' : 'Pause'}
+                  {isPaused ? 'Unpause' : 'Pause'}
                 </button>
               </div>
             </div>

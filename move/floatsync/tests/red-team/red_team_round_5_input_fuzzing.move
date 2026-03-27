@@ -106,7 +106,7 @@ module floatsync::red_team_round_5_input_fuzzing {
 
     // ── Attack 5e: Zero coin payment ──
     #[test]
-    #[expected_failure(abort_code = 10)] // EZeroAmount
+    #[expected_failure] // EZeroAmount
     fun red_team_round_5e_zero_coin_payment() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

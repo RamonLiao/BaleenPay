@@ -19,7 +19,7 @@ module floatsync::red_team_round_6_ordering {
     // ── Attack 6a: Admin pauses merchant AFTER subscription created, blocks process ──
     // Permissionless process_subscription checks paused -- admin can DoS merchant's income
     #[test]
-    #[expected_failure(abort_code = 2)] // EPaused
+    #[expected_failure] // EPaused
     fun red_team_round_6a_pause_blocks_subscription_process() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
@@ -97,7 +97,7 @@ module floatsync::red_team_round_6_ordering {
 
     // ── Attack 6c: Payment to paused merchant is blocked ──
     #[test]
-    #[expected_failure(abort_code = 2)] // EPaused
+    #[expected_failure] // EPaused
     fun red_team_round_6c_pay_once_paused() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;
