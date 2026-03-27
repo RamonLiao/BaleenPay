@@ -88,6 +88,48 @@ export interface UsePaymentHistoryReturn {
   refetch: () => void
 }
 
+// ── Component props ──
+
+export interface CheckoutButtonProps {
+  amount: bigint | number
+  coin: string
+  orderId: string
+  onSuccess?: (digest: string) => void
+  onError?: (error: Error) => void
+  disabled?: boolean
+  className?: string
+  children?: React.ReactNode | ((state: MutationState) => React.ReactNode)
+}
+
+export interface PaymentFormProps {
+  coins?: string[]
+  defaultCoin?: string
+  orderId?: string
+  onSuccess?: (digest: string) => void
+  onError?: (error: Error) => void
+  disabled?: boolean
+  className?: string
+}
+
+export interface SubscribeButtonProps {
+  amountPerPeriod: bigint | number
+  periodMs: number
+  prepaidPeriods: number
+  coin: string
+  orderId: string
+  onSuccess?: (digest: string) => void
+  onError?: (error: Error) => void
+  disabled?: boolean
+  className?: string
+  children?: React.ReactNode | ((state: MutationState) => React.ReactNode)
+}
+
+export interface MerchantBadgeProps {
+  merchantId?: ObjectId
+  className?: string
+  children?: (info: MerchantInfo, isLoading: boolean) => React.ReactNode
+}
+
 export type {
   FloatSyncConfig,
   FloatSyncClientOptions,

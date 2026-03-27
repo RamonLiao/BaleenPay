@@ -8,6 +8,12 @@ export { useSubscription } from './hooks/useSubscription.js'
 export { useMerchant } from './hooks/useMerchant.js'
 export { usePaymentHistory } from './hooks/usePaymentHistory.js'
 
+// Components
+export { CheckoutButton } from './components/CheckoutButton.js'
+export { PaymentForm } from './components/PaymentForm.js'
+export { SubscribeButton } from './components/SubscribeButton.js'
+export { MerchantBadge } from './components/MerchantBadge.js'
+
 // Types
 export type {
   FloatSyncProviderProps,
@@ -20,4 +26,8 @@ export type {
   UseMerchantReturn,
   UsePaymentHistoryOptions,
   UsePaymentHistoryReturn,
+  CheckoutButtonProps,
+  PaymentFormProps,
+  SubscribeButtonProps,
+  MerchantBadgeProps,
 } from './types.js'
