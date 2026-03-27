@@ -1,27 +1,29 @@
 // packages/sdk/src/version.ts
 
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
 export interface VersionInfo {
   hasV2: boolean
 }
 
-const cache = new WeakMap<SuiJsonRpcClient, VersionInfo>()
+const cache = new WeakMap<SuiGrpcClient, VersionInfo>()
 
-export async function detectVersion(client: SuiJsonRpcClient, packageId: string): Promise<VersionInfo> {
+export async function detectVersion(client: SuiGrpcClient, packageId: string): Promise<VersionInfo> {
   const cached = cache.get(client)
   if (cached) return cached
 
   try {
-    const mod = await client.getNormalizedMoveModule({
-      package: packageId,
-      module: 'payment',
+    await client.getMoveFunction({
+      packageId,
+      moduleName: 'payment',
+      name: 'pay_once_v2',
     })
-    const hasV2 = 'pay_once_v2' in mod.exposedFunctions
-    const result: VersionInfo = { hasV2 }
+    const result: VersionInfo = { hasV2: true }
     cache.set(client, result)
     return result
   } catch {
-    return { hasV2: false }
+    const result: VersionInfo = { hasV2: false }
+    cache.set(client, result)
+    return result
   }
 }
