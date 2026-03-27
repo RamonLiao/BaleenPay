@@ -1,0 +1,62 @@
+import { describe, it, expect, vi } from 'vitest'
+import { Transaction } from '@mysten/sui/transactions'
+import { buildPayOnceRouted } from '../src/transactions/pay.js'
+import { buildClaimYield } from '../src/transactions/yield.js'
+import type { FloatSyncConfig, PayParams } from '../src/types.js'
+
+const config: FloatSyncConfig = {
+  network: 'testnet',
+  packageId: '0xPACKAGE',
+  merchantId: '0xMERCHANT',
+  routerConfigId: '0xROUTER',
+  vaultId: '0xVAULT',
+  yieldVaultId: '0xYIELD_VAULT',
+}
+
+const mockClient = {
+  listCoins: vi.fn().mockResolvedValue({
+    objects: [{ objectId: '0xCOIN1', balance: '1000000' }],
+  }),
+} as any
+
+describe('buildPayOnceRouted', () => {
+  it('builds pay_once_routed PTB with vault', async () => {
+    const params: PayParams = { amount: 100n, coin: 'USDC', orderId: 'order-001' }
+    const tx = await buildPayOnceRouted(mockClient, config, params, '0xSENDER')
+    expect(tx).toBeInstanceOf(Transaction)
+    expect(tx.getData).toBeDefined()
+  })
+
+  it('throws without vaultId in config', async () => {
+    const noVaultConfig = { ...config, vaultId: undefined }
+    const params: PayParams = { amount: 100n, coin: 'USDC', orderId: 'order-001' }
+    await expect(buildPayOnceRouted(mockClient, noVaultConfig, params, '0xSENDER'))
+      .rejects.toThrow('vaultId is required')
+  })
+
+  it('throws without routerConfigId', async () => {
+    const noRouterConfig = { ...config, routerConfigId: undefined }
+    const params: PayParams = { amount: 100n, coin: 'USDC', orderId: 'order-001' }
+    await expect(buildPayOnceRouted(mockClient, noRouterConfig as any, params, '0xSENDER'))
+      .rejects.toThrow('routerConfigId is required')
+  })
+})
+
+describe('buildClaimYield (revised)', () => {
+  it('builds claim_yield_v2 PTB with YieldVault when coinType provided', () => {
+    const tx = buildClaimYield(config, '0xMERCHANT_CAP', 'USDB')
+    expect(tx).toBeInstanceOf(Transaction)
+    expect(tx.getData).toBeDefined()
+  })
+
+  it('builds legacy claim_yield when no coinType', () => {
+    const tx = buildClaimYield(config, '0xMERCHANT_CAP')
+    expect(tx).toBeInstanceOf(Transaction)
+  })
+
+  it('throws without yieldVaultId when coinType provided', () => {
+    const noYvConfig = { ...config, yieldVaultId: undefined }
+    expect(() => buildClaimYield(noYvConfig, '0xCAP', 'USDB'))
+      .toThrow('yieldVaultId is required')
+  })
+})

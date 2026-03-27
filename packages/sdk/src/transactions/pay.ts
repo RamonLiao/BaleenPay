@@ -62,6 +62,47 @@ export async function buildPayOnceV2(
 }
 
 /**
+ * Build a pay_once_routed PTB for StableLayer mode.
+ * Routes payment to Vault instead of direct transfer.
+ */
+export async function buildPayOnceRouted(
+  client: SuiGrpcClient,
+  config: FloatSyncConfig,
+  params: PayParams,
+  sender: string,
+): Promise<Transaction> {
+  if (!config.routerConfigId) throw new Error('routerConfigId is required for pay_once_routed')
+  if (!config.vaultId) throw new Error('vaultId is required for pay_once_routed')
+
+  validateOrderId(params.orderId)
+
+  const coinConfig = resolveCoin(config.network, params.coin)
+  const amount = BigInt(params.amount)
+
+  if (amount <= 0n) {
+    throw new Error('Payment amount must be greater than zero')
+  }
+
+  const tx = new Transaction()
+  const paymentCoin = await prepareCoin(tx, client, sender, coinConfig.type, amount)
+
+  tx.moveCall({
+    target: `${config.packageId}::payment::pay_once_routed`,
+    typeArguments: [coinTypeArg(coinConfig.type)],
+    arguments: [
+      tx.object(config.routerConfigId),
+      tx.object(config.merchantId),
+      tx.object(config.vaultId),
+      paymentCoin,
+      tx.pure.string(params.orderId),
+      tx.object(CLOCK_OBJECT_ID),
+    ],
+  })
+
+  return tx
+}
+
+/**
  * Build a legacy pay_once PTB (v1, no orderId dedup).
  */
 export async function buildPayOnce(

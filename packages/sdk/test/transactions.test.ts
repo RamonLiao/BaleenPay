@@ -31,13 +31,14 @@ describe('buildSelfPause', () => {
 })
 
 describe('buildClaimYield', () => {
-  it('creates a valid transaction', () => {
+  it('creates a valid transaction (legacy path)', () => {
     const tx = buildClaimYield(config, '0xcap')
     expect(tx).toBeDefined()
   })
 
-  it('throws without routerConfigId', () => {
+  it('uses legacy merchant::claim_yield without coinType', () => {
     const noRouter = { ...config, routerConfigId: undefined }
-    expect(() => buildClaimYield(noRouter, '0xcap')).toThrow('routerConfigId')
+    const tx = buildClaimYield(noRouter, '0xcap')
+    expect(tx).toBeDefined()
   })
 })
