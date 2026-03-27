@@ -1,6 +1,7 @@
 // packages/sdk/src/client.ts
 
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
+import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import type {
   FloatSyncConfig,
   PayParams,
@@ -17,7 +18,9 @@ import type {
   Unsubscribe,
   ObjectId,
 } from './types.js'
-import { DEFAULT_RPC_URLS } from './constants.js'
+import { DEFAULT_GRPC_URLS, DEFAULT_GRAPHQL_URLS } from './constants.js'
+import { QUERY_EVENTS } from './events/queries.js'
+import type { QueryEventsResult } from './events/queries.js'
 import { ValidationError } from './errors.js'
 import { IdempotencyGuard } from './idempotency.js'
 import { EventStream } from './events/stream.js'
@@ -40,7 +43,8 @@ export interface FloatSyncClientOptions {
 
 export class FloatSync {
   readonly config: FloatSyncConfig
-  readonly suiClient: SuiJsonRpcClient
+  private readonly grpcClient: SuiGrpcClient
+  private readonly graphqlClient: SuiGraphQLClient
   private readonly idempotency: IdempotencyGuard
   private readonly events: EventStream
   private versionCache?: VersionInfo
@@ -51,19 +55,27 @@ export class FloatSync {
     if (!config.network) throw new ValidationError('MISSING_NETWORK', 'network is required')
 
     this.config = config
-    this.suiClient = new SuiJsonRpcClient({
-      url: config.rpcUrl ?? DEFAULT_RPC_URLS[config.network] ?? getJsonRpcFullnodeUrl(config.network),
+    this.grpcClient = new SuiGrpcClient({
+      baseUrl: config.grpcUrl ?? DEFAULT_GRPC_URLS[config.network],
+      network: config.network,
+    })
+    this.graphqlClient = new SuiGraphQLClient({
+      url: config.graphqlUrl ?? DEFAULT_GRAPHQL_URLS[config.network],
       network: config.network,
     })
     this.idempotency = new IdempotencyGuard({ pendingTtlMs: options?.pendingTtlMs })
     this.events = new EventStream(config.packageId)
   }
 
+  get rawClient(): SuiGrpcClient {
+    return this.grpcClient
+  }
+
   // ── Version Detection ──
 
   private async version(): Promise<VersionInfo> {
     if (!this.versionCache) {
-      this.versionCache = await detectVersion(this.suiClient, this.config.packageId)
+      this.versionCache = await detectVersion(this.grpcClient, this.config.packageId)
     }
     return this.versionCache
   }
@@ -80,7 +92,7 @@ export class FloatSync {
       throw new ValidationError('DUPLICATE_PENDING', `Payment for order "${params.orderId}" is already in progress`)
     }
     if (existing) {
-      return { tx: (await buildPayOnceV2(this.suiClient, this.config, params, sender)) }
+      return { tx: (await buildPayOnceV2(this.grpcClient, this.config, params, sender)) }
       // Note: caller can check idempotency.getCachedResult() for the prior result
     }
 
@@ -88,8 +100,8 @@ export class FloatSync {
     try {
       const ver = await this.version()
       const tx = ver.hasV2
-        ? await buildPayOnceV2(this.suiClient, this.config, params, sender)
-        : await buildPayOnce(this.suiClient, this.config, params, sender)
+        ? await buildPayOnceV2(this.grpcClient, this.config, params, sender)
+        : await buildPayOnce(this.grpcClient, this.config, params, sender)
       return { tx }
     } catch (err) {
       this.idempotency.remove(key)
@@ -111,8 +123,8 @@ export class FloatSync {
     try {
       const ver = await this.version()
       const tx = ver.hasV2
-        ? await buildSubscribeV2(this.suiClient, this.config, params, sender)
-        : await buildSubscribe(this.suiClient, this.config, params, sender)
+        ? await buildSubscribeV2(this.grpcClient, this.config, params, sender)
+        : await buildSubscribe(this.grpcClient, this.config, params, sender)
       return { tx }
     } catch (err) {
       this.idempotency.remove(key)
@@ -132,7 +144,7 @@ export class FloatSync {
 
   /** Build a fund_subscription transaction. */
   async fundSubscription(params: FundParams, sender: string): Promise<TransactionResult> {
-    const tx = await buildFundSubscription(this.suiClient, this.config, params, sender)
+    const tx = await buildFundSubscription(this.grpcClient, this.config, params, sender)
     return { tx }
   }
 
@@ -172,7 +184,7 @@ export class FloatSync {
 
   /** Start listening to on-chain events via WebSocket. */
   async startEventStream(): Promise<void> {
-    await this.events.start(this.suiClient)
+    await this.events.start(this.graphqlClient)
   }
 
   /** Stop listening to on-chain events. */
@@ -187,16 +199,13 @@ export class FloatSync {
    */
   async getMerchant(merchantId?: ObjectId): Promise<MerchantInfo> {
     const id = merchantId ?? this.config.merchantId
-    const obj = await this.suiClient.getObject({
-      id,
-      options: { showContent: true },
-    })
+    const { object } = await this.grpcClient.getObject({ objectId: id, include: { json: true } })
 
-    if (!obj.data?.content || obj.data.content.dataType !== 'moveObject') {
+    if (!object?.json) {
       throw new ValidationError('MERCHANT_NOT_FOUND', `Merchant ${id} not found`)
     }
 
-    const fields = obj.data.content.fields as Record<string, unknown>
+    const fields = object.json as Record<string, unknown>
     return deserializeMerchant(id, fields)
   }
 
@@ -204,16 +213,13 @@ export class FloatSync {
    * Fetch subscription info from on-chain state.
    */
   async getSubscription(subscriptionId: ObjectId): Promise<SubscriptionInfo> {
-    const obj = await this.suiClient.getObject({
-      id: subscriptionId,
-      options: { showContent: true },
-    })
+    const { object } = await this.grpcClient.getObject({ objectId: subscriptionId, include: { json: true } })
 
-    if (!obj.data?.content || obj.data.content.dataType !== 'moveObject') {
+    if (!object?.json) {
       throw new ValidationError('SUBSCRIPTION_NOT_FOUND', `Subscription ${subscriptionId} not found`)
     }
 
-    const fields = obj.data.content.fields as Record<string, unknown>
+    const fields = object.json as Record<string, unknown>
     return deserializeSubscription(subscriptionId, fields)
   }
 
@@ -228,29 +234,37 @@ export class FloatSync {
   }> {
     const { cursor, limit = 20, order = 'desc', payer } = params ?? {}
 
-    // Query both v1 and v2 payment events
     const eventType = `${this.config.packageId}::events::PaymentReceivedV2`
-    const result = await this.suiClient.queryEvents({
-      query: { MoveEventType: eventType },
-      cursor: cursor ? JSON.parse(cursor) : undefined,
-      limit,
-      order: order === 'asc' ? 'ascending' : 'descending',
+    const result = await this.graphqlClient.query<QueryEventsResult>({
+      query: QUERY_EVENTS,
+      variables: {
+        type: eventType,
+        after: cursor ?? undefined,
+        first: limit,
+      },
     })
 
-    const { normalizeEvent } = await import('./events/types.js')
-    let events = result.data.map((e) =>
-      normalizeEvent(e.type, e.parsedJson as Record<string, unknown>),
-    )
+    if (!result.data) {
+      return { events: [], hasNextPage: false }
+    }
 
-    // Client-side payer filter
+    const { normalizeEvent } = await import('./events/types.js')
+    let events = result.data.events.nodes
+      .filter((n) => n.type?.repr && n.contents?.json)
+      .map((n) => normalizeEvent(n.type!.repr, n.contents!.json))
+
     if (payer) {
       events = events.filter((e) => e.payer === payer)
     }
 
+    if (order === 'desc') {
+      events.reverse()
+    }
+
     return {
       events,
-      nextCursor: result.nextCursor ? JSON.stringify(result.nextCursor) : undefined,
-      hasNextPage: result.hasNextPage,
+      nextCursor: result.data.events.pageInfo.endCursor ?? undefined,
+      hasNextPage: result.data.events.pageInfo.hasNextPage,
     }
   }
 }
