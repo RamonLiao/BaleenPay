@@ -1,28 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  mockGetObject,
+  mockListCoins,
+  mockGetMoveFunction,
+  setupGrpcMock,
+  setupGraphQLMock,
+  mockV2Available,
+  mockDefaultCoins,
+} from './_mocks.js'
 import { FloatSync } from '../src/client.js'
 import { ValidationError } from '../src/errors.js'
 
-// ── Shared mocks ──
-
-const mockGetCoins = vi.fn()
-const mockGetNormalizedMoveModule = vi.fn()
-
-vi.mock('@mysten/sui/jsonRpc', () => {
-  class MockSuiJsonRpcClient {
-    url: string
-    constructor(opts: { url: string; network?: string }) {
-      this.url = opts.url
-    }
-    getObject = vi.fn()
-    queryEvents = vi.fn()
-    getCoins = mockGetCoins
-    getNormalizedMoveModule = mockGetNormalizedMoveModule
-  }
-  return {
-    SuiJsonRpcClient: MockSuiJsonRpcClient,
-    getJsonRpcFullnodeUrl: (network: string) => `https://fullnode.${network}.sui.io:443`,
-  }
-})
+// Hoist mocks before any imports that use them
+setupGrpcMock()
+setupGraphQLMock()
 
 const SENDER = '0xsender'
 const baseConfig = {
@@ -34,12 +25,8 @@ const baseConfig = {
 beforeEach(() => {
   vi.clearAllMocks()
   // Default: v2 available
-  mockGetNormalizedMoveModule.mockResolvedValue({
-    exposedFunctions: { pay_once: {}, pay_once_v2: {}, subscribe: {}, subscribe_v2: {} },
-  })
-  mockGetCoins.mockResolvedValue({
-    data: [{ coinObjectId: '0xcoin1', balance: '999999999999' }],
-  })
+  mockV2Available()
+  mockDefaultCoins()
 })
 
 // ────────────────────────────────────────────────────────────
@@ -80,7 +67,6 @@ describe('Monkey: Invalid orderId', () => {
   })
 
   it('rejects empty orderId', async () => {
-    // Empty orderId fails at IdempotencyGuard.key (no orderId + no fallback)
     await expect(
       client.pay({ amount: 1000n, coin: 'SUI', orderId: '' }, SENDER),
     ).rejects.toThrow()
@@ -188,13 +174,10 @@ describe('Monkey: Invalid amounts', () => {
   })
 
   it('accepts very large amount (u64 max)', async () => {
-    // This should build the tx, even though the chain would reject insufficient coins
-    // We mock sufficient coins
-    mockGetCoins.mockResolvedValue({
-      data: [{ coinObjectId: '0xwhale', balance: '18446744073709551615' }],
+    mockListCoins.mockResolvedValue({
+      objects: [{ objectId: '0xwhale', balance: '18446744073709551615' }],
     })
 
-    // For SUI (gas coin shortcut), amount validation happens at tx level
     const result = await client.pay(
       { amount: 18446744073709551615n, coin: 'SUI', orderId: 'max-u64' },
       SENDER,
@@ -291,9 +274,8 @@ describe('Monkey: Invalid coin', () => {
   })
 
   it('accepts full coin type starting with 0x', async () => {
-    // Full type passes through registry — may fail at getCoins but not at validation
-    mockGetCoins.mockResolvedValue({
-      data: [{ coinObjectId: '0xcustom1', balance: '999999' }],
+    mockListCoins.mockResolvedValue({
+      objects: [{ objectId: '0xcustom1', balance: '999999' }],
     })
 
     const result = await client.pay(
@@ -315,33 +297,24 @@ describe('Monkey: Query edge cases', () => {
     client = new FloatSync(baseConfig)
   })
 
-  it('getMerchant throws on null data', async () => {
-    ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null })
+  it('getMerchant throws on null object', async () => {
+    mockGetObject.mockResolvedValue({ object: null })
     await expect(client.getMerchant()).rejects.toThrow(/not found/)
   })
 
-  it('getMerchant throws on non-moveObject dataType', async () => {
-    ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { content: { dataType: 'package' } },
-    })
+  it('getMerchant throws on null json', async () => {
+    mockGetObject.mockResolvedValue({ object: { json: null } })
     await expect(client.getMerchant()).rejects.toThrow(/not found/)
   })
 
   it('getSubscription throws on deleted object', async () => {
-    ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { content: null },
-    })
+    mockGetObject.mockResolvedValue({ object: null })
     await expect(client.getSubscription('0xdeleted')).rejects.toThrow(/not found/)
   })
 
   it('getMerchant handles missing optional fields gracefully', async () => {
-    ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: {
-        content: {
-          dataType: 'moveObject',
-          fields: {}, // all fields missing
-        },
-      },
+    mockGetObject.mockResolvedValue({
+      object: { json: {} },
     })
 
     const info = await client.getMerchant()

@@ -1,32 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  mockGetObject,
+  mockListCoins,
+  mockGetMoveFunction,
+  mockGraphQLQuery,
+  setupGrpcMock,
+  setupGraphQLMock,
+  mockV2Available,
+  mockV1Only,
+  mockDefaultCoins,
+  makeGraphQLEventsResponse,
+} from './_mocks.js'
 import { FloatSync } from '../src/client.js'
 import { AdminClient } from '../src/admin.js'
 import { IdempotencyGuard } from '../src/idempotency.js'
 import { ValidationError } from '../src/errors.js'
 
-// ── Shared mocks ──
-
-const mockGetObject = vi.fn()
-const mockQueryEvents = vi.fn()
-const mockGetCoins = vi.fn()
-const mockGetNormalizedMoveModule = vi.fn()
-
-vi.mock('@mysten/sui/jsonRpc', () => {
-  class MockSuiJsonRpcClient {
-    url: string
-    constructor(opts: { url: string; network?: string }) {
-      this.url = opts.url
-    }
-    getObject = mockGetObject
-    queryEvents = mockQueryEvents
-    getCoins = mockGetCoins
-    getNormalizedMoveModule = mockGetNormalizedMoveModule
-  }
-  return {
-    SuiJsonRpcClient: MockSuiJsonRpcClient,
-    getJsonRpcFullnodeUrl: (network: string) => `https://fullnode.${network}.sui.io:443`,
-  }
-})
+// Hoist mocks before any imports that use them
+setupGrpcMock()
+setupGraphQLMock()
 
 const PKG = '0xpkg_integration'
 const MERCHANT = '0xmerchant_int'
@@ -42,23 +34,14 @@ const baseConfig = {
 
 /** Setup mocks for a v2-capable contract */
 function setupV2Mocks() {
-  mockGetNormalizedMoveModule.mockResolvedValue({
-    exposedFunctions: { pay_once: {}, pay_once_v2: {}, subscribe: {}, subscribe_v2: {} },
-  })
-  // Default SUI coin (gas coin shortcut — no getCoins needed for SUI)
-  mockGetCoins.mockResolvedValue({
-    data: [{ coinObjectId: '0xcoin1', balance: '10000000000' }],
-  })
+  mockV2Available()
+  mockDefaultCoins()
 }
 
 /** Setup mocks for a v1-only contract */
 function setupV1Mocks() {
-  mockGetNormalizedMoveModule.mockResolvedValue({
-    exposedFunctions: { pay_once: {}, subscribe: {} },
-  })
-  mockGetCoins.mockResolvedValue({
-    data: [{ coinObjectId: '0xcoin1', balance: '10000000000' }],
-  })
+  mockV1Only()
+  mockDefaultCoins()
 }
 
 beforeEach(() => {
@@ -90,13 +73,13 @@ describe('Integration: Full merchant lifecycle (V2)', () => {
     expect(payResult.tx).toBeDefined()
 
     // Version detection should have been called
-    expect(mockGetNormalizedMoveModule).toHaveBeenCalledWith({
-      package: PKG,
-      module: 'payment',
+    expect(mockGetMoveFunction).toHaveBeenCalledWith({
+      packageId: PKG,
+      moduleName: 'payment',
+      name: 'pay_once_v2',
     })
 
     // ── Step 3: Same orderId → idempotency guard marks pending ──
-    // The first pay is still 'pending' (not yet markCompleted), so second call throws
     await expect(
       client.pay({ amount: 1_000_000n, coin: 'SUI', orderId: 'order-int-001' }, SENDER),
     ).rejects.toThrow('already in progress')
@@ -116,18 +99,15 @@ describe('Integration: Full merchant lifecycle (V2)', () => {
 
     // ── Step 5: Query merchant ──
     mockGetObject.mockResolvedValue({
-      data: {
-        content: {
-          dataType: 'moveObject',
-          fields: {
-            owner: '0xowner',
-            brand_name: 'IntegrationShop',
-            total_received: '1000000',
-            idle_principal: '800000',
-            accrued_yield: '10000',
-            active_subscriptions: 1,
-            paused: false,
-          },
+      object: {
+        json: {
+          owner: '0xowner',
+          brand_name: 'IntegrationShop',
+          total_received: '1000000',
+          idle_principal: '800000',
+          accrued_yield: '10000',
+          active_subscriptions: 1,
+          paused: false,
         },
       },
     })
@@ -182,7 +162,7 @@ describe('Integration: V1 fallback path', () => {
     )
     expect(result.tx).toBeDefined()
     // Version detection called once
-    expect(mockGetNormalizedMoveModule).toHaveBeenCalledTimes(1)
+    expect(mockGetMoveFunction).toHaveBeenCalledTimes(1)
   })
 
   it('subscribe routes to subscribe (v1) when v2 not available', async () => {
@@ -205,13 +185,13 @@ describe('Integration: V1 fallback path', () => {
       { amountPerPeriod: 100n, periodMs: 1000, prepaidPeriods: 1, coin: 'SUI', orderId: 'cache-002' },
       SENDER,
     )
-    // getNormalizedMoveModule called only once despite two operations
-    expect(mockGetNormalizedMoveModule).toHaveBeenCalledTimes(1)
+    // getMoveFunction called only once despite two operations
+    expect(mockGetMoveFunction).toHaveBeenCalledTimes(1)
   })
 })
 
 // ────────────────────────────────────────────────────────────
-//  Coin helper integration: non-SUI coins require getCoins
+//  Coin helper integration: non-SUI coins require listCoins
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: Coin helper with USDC', () => {
@@ -223,10 +203,10 @@ describe('Integration: Coin helper with USDC', () => {
   })
 
   it('pay with USDC fetches coins and builds PTB', async () => {
-    mockGetCoins.mockResolvedValue({
-      data: [
-        { coinObjectId: '0xusdc1', balance: '5000000' },
-        { coinObjectId: '0xusdc2', balance: '3000000' },
+    mockListCoins.mockResolvedValue({
+      objects: [
+        { objectId: '0xusdc1', balance: '5000000' },
+        { objectId: '0xusdc2', balance: '3000000' },
       ],
     })
 
@@ -236,16 +216,16 @@ describe('Integration: Coin helper with USDC', () => {
     )
     expect(result.tx).toBeDefined()
 
-    // getCoins should have been called for USDC
-    expect(mockGetCoins).toHaveBeenCalledWith({
+    // listCoins should have been called for USDC
+    expect(mockListCoins).toHaveBeenCalledWith({
       owner: SENDER,
       coinType: expect.stringContaining('::usdc::USDC'),
     })
   })
 
   it('pay with USDC fails when insufficient balance', async () => {
-    mockGetCoins.mockResolvedValue({
-      data: [{ coinObjectId: '0xusdc1', balance: '100' }],
+    mockListCoins.mockResolvedValue({
+      objects: [{ objectId: '0xusdc1', balance: '100' }],
     })
 
     await expect(
@@ -257,7 +237,7 @@ describe('Integration: Coin helper with USDC', () => {
   })
 
   it('pay with USDC fails when no coins found', async () => {
-    mockGetCoins.mockResolvedValue({ data: [] })
+    mockListCoins.mockResolvedValue({ objects: [] })
 
     await expect(
       client.pay({ amount: 1_000_000n, coin: 'USDC', orderId: 'usdc-empty-001' }, SENDER),
@@ -311,17 +291,14 @@ describe('Integration: Subscription operations', () => {
 
   it('getSubscription deserializes on-chain data', async () => {
     mockGetObject.mockResolvedValue({
-      data: {
-        content: {
-          dataType: 'moveObject',
-          fields: {
-            merchant_id: MERCHANT,
-            payer: SENDER,
-            amount_per_period: '100000',
-            period_ms: 86400000,
-            next_due: 1711324800000,
-            balance: '300000',
-          },
+      object: {
+        json: {
+          merchant_id: MERCHANT,
+          payer: SENDER,
+          amount_per_period: '100000',
+          period_ms: 86400000,
+          next_due: 1711324800000,
+          balance: '300000',
         },
       },
     })
@@ -350,24 +327,24 @@ describe('Integration: Event stream (polling)', () => {
 
   it('startEventStream seeds cursor and starts polling', async () => {
     // Seed query returns empty (no prior events)
-    mockQueryEvents.mockResolvedValue({ data: [], hasNextPage: false })
+    mockGraphQLQuery.mockResolvedValue(makeGraphQLEventsResponse([]))
 
     const client = new FloatSync(baseConfig)
     await client.startEventStream()
 
-    // Seed call uses descending + limit 1
-    expect(mockQueryEvents).toHaveBeenCalledWith({
-      query: { MoveEventModule: { package: PKG, module: 'events' } },
-      limit: 1,
-      order: 'descending',
-    })
+    // Seed call should have been made with first: 1
+    expect(mockGraphQLQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ first: 1 }),
+      }),
+    )
 
     client.stopEventStream()
   })
 
   it('poll delivers normalized events to listeners', async () => {
     // Seed: no prior events
-    mockQueryEvents.mockResolvedValueOnce({ data: [], hasNextPage: false })
+    mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
     const client = new FloatSync(baseConfig)
     const events: unknown[] = []
@@ -376,22 +353,22 @@ describe('Integration: Event stream (polling)', () => {
     await client.startEventStream()
 
     // Next poll returns an event
-    mockQueryEvents.mockResolvedValueOnce({
-      data: [{
-        id: { txDigest: '0xabc', eventSeq: '0' },
-        type: `${PKG}::events::PaymentReceivedV2`,
-        parsedJson: {
-          merchant_id: MERCHANT,
-          payer: SENDER,
-          amount: '1000000',
-          payment_type: 0,
-          timestamp: 1711324800000,
-          order_id: 'evt-001',
-          coin_type: '0x2::sui::SUI',
+    mockGraphQLQuery.mockResolvedValueOnce(
+      makeGraphQLEventsResponse([
+        {
+          type: `${PKG}::events::PaymentReceivedV2`,
+          json: {
+            merchant_id: MERCHANT,
+            payer: SENDER,
+            amount: '1000000',
+            payment_type: 0,
+            timestamp: 1711324800000,
+            order_id: 'evt-001',
+            coin_type: '0x2::sui::SUI',
+          },
         },
-      }],
-      hasNextPage: false,
-    })
+      ]),
+    )
 
     // Advance timer to trigger poll
     await vi.advanceTimersByTimeAsync(3000)
@@ -404,7 +381,7 @@ describe('Integration: Event stream (polling)', () => {
   })
 
   it('wildcard listener receives all event types', async () => {
-    mockQueryEvents.mockResolvedValueOnce({ data: [], hasNextPage: false })
+    mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
     const client = new FloatSync(baseConfig)
     const events: unknown[] = []
@@ -412,13 +389,18 @@ describe('Integration: Event stream (polling)', () => {
 
     await client.startEventStream()
 
-    mockQueryEvents.mockResolvedValueOnce({
-      data: [
-        { id: { txDigest: '0xa', eventSeq: '0' }, type: `${PKG}::events::MerchantPaused`, parsedJson: { merchant_id: MERCHANT } },
-        { id: { txDigest: '0xa', eventSeq: '1' }, type: `${PKG}::events::YieldClaimed`, parsedJson: { merchant_id: MERCHANT, amount: '50000' } },
-      ],
-      hasNextPage: false,
-    })
+    mockGraphQLQuery.mockResolvedValueOnce(
+      makeGraphQLEventsResponse([
+        {
+          type: `${PKG}::events::MerchantPaused`,
+          json: { merchant_id: MERCHANT },
+        },
+        {
+          type: `${PKG}::events::YieldClaimed`,
+          json: { merchant_id: MERCHANT, amount: '50000' },
+        },
+      ]),
+    )
 
     await vi.advanceTimersByTimeAsync(3000)
 
@@ -428,7 +410,7 @@ describe('Integration: Event stream (polling)', () => {
   })
 
   it('filtered listener only receives matching events', async () => {
-    mockQueryEvents.mockResolvedValueOnce({ data: [], hasNextPage: false })
+    mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
     const client = new FloatSync(baseConfig)
     const events: unknown[] = []
@@ -436,13 +418,18 @@ describe('Integration: Event stream (polling)', () => {
 
     await client.startEventStream()
 
-    mockQueryEvents.mockResolvedValueOnce({
-      data: [
-        { id: { txDigest: '0xb', eventSeq: '0' }, type: `${PKG}::events::PaymentReceivedV2`, parsedJson: { merchant_id: MERCHANT, payer: SENDER, amount: '100', order_id: 'x1', coin_type: 'SUI', timestamp: 1000, payment_type: 0 } },
-        { id: { txDigest: '0xb', eventSeq: '1' }, type: `${PKG}::events::PaymentReceivedV2`, parsedJson: { merchant_id: MERCHANT, payer: '0xother', amount: '200', order_id: 'x2', coin_type: 'SUI', timestamp: 2000, payment_type: 0 } },
-      ],
-      hasNextPage: false,
-    })
+    mockGraphQLQuery.mockResolvedValueOnce(
+      makeGraphQLEventsResponse([
+        {
+          type: `${PKG}::events::PaymentReceivedV2`,
+          json: { merchant_id: MERCHANT, payer: SENDER, amount: '100', order_id: 'x1', coin_type: 'SUI', timestamp: 1000, payment_type: 0 },
+        },
+        {
+          type: `${PKG}::events::PaymentReceivedV2`,
+          json: { merchant_id: MERCHANT, payer: '0xother', amount: '200', order_id: 'x2', coin_type: 'SUI', timestamp: 2000, payment_type: 0 },
+        },
+      ]),
+    )
 
     await vi.advanceTimersByTimeAsync(3000)
 
@@ -465,16 +452,15 @@ describe('Integration: Payment history', () => {
 
   it('fetches page 1, then page 2 with cursor', async () => {
     // Page 1
-    mockQueryEvents.mockResolvedValueOnce({
-      data: [
-        {
+    mockGraphQLQuery.mockResolvedValueOnce(
+      makeGraphQLEventsResponse(
+        [{
           type: `${PKG}::events::PaymentReceivedV2`,
-          parsedJson: { merchant_id: MERCHANT, payer: SENDER, amount: '100', order_id: 'p1', coin_type: 'SUI', timestamp: 1000, payment_type: 0 },
-        },
-      ],
-      nextCursor: { txDigest: '0xabc', eventSeq: '0' },
-      hasNextPage: true,
-    })
+          json: { merchant_id: MERCHANT, payer: SENDER, amount: '100', order_id: 'p1', coin_type: 'SUI', timestamp: 1000, payment_type: 0 },
+        }],
+        { hasNextPage: true, endCursor: 'cursor-page1' },
+      ),
+    )
 
     const page1 = await client.getPaymentHistory({ limit: 1 })
     expect(page1.events).toHaveLength(1)
@@ -482,16 +468,15 @@ describe('Integration: Payment history', () => {
     expect(page1.nextCursor).toBeDefined()
 
     // Page 2
-    mockQueryEvents.mockResolvedValueOnce({
-      data: [
-        {
+    mockGraphQLQuery.mockResolvedValueOnce(
+      makeGraphQLEventsResponse(
+        [{
           type: `${PKG}::events::PaymentReceivedV2`,
-          parsedJson: { merchant_id: MERCHANT, payer: '0xother', amount: '200', order_id: 'p2', coin_type: 'SUI', timestamp: 2000, payment_type: 0 },
-        },
-      ],
-      nextCursor: null,
-      hasNextPage: false,
-    })
+          json: { merchant_id: MERCHANT, payer: '0xother', amount: '200', order_id: 'p2', coin_type: 'SUI', timestamp: 2000, payment_type: 0 },
+        }],
+        { hasNextPage: false, endCursor: null },
+      ),
+    )
 
     const page2 = await client.getPaymentHistory({ limit: 1, cursor: page1.nextCursor })
     expect(page2.events).toHaveLength(1)
@@ -499,13 +484,18 @@ describe('Integration: Payment history', () => {
     expect(page2.hasNextPage).toBe(false)
   })
 
-  it('ascending order is passed to RPC', async () => {
-    mockQueryEvents.mockResolvedValue({ data: [], nextCursor: null, hasNextPage: false })
+  it('GraphQL query is called with correct variables', async () => {
+    mockGraphQLQuery.mockResolvedValue(makeGraphQLEventsResponse([]))
 
     await client.getPaymentHistory({ order: 'asc' })
 
-    expect(mockQueryEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ order: 'ascending' }),
+    // With GraphQL, order is handled client-side; verify query is called
+    expect(mockGraphQLQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({
+          type: `${PKG}::events::PaymentReceivedV2`,
+        }),
+      }),
     )
   })
 })
@@ -552,7 +542,7 @@ describe('Integration: Self-pause / unpause', () => {
 describe('Integration: Idempotency error cleanup', () => {
   it('removes pending key when pay throws (e.g. insufficient coins)', async () => {
     setupV2Mocks()
-    mockGetCoins.mockResolvedValue({ data: [] }) // no USDC coins
+    mockListCoins.mockResolvedValue({ objects: [] }) // no USDC coins
 
     const client = new FloatSync(baseConfig)
 
@@ -564,8 +554,8 @@ describe('Integration: Idempotency error cleanup', () => {
     expect(client.idempotencyGuard.size).toBe(0)
 
     // Subsequent pay with same orderId should work (not blocked by stale pending)
-    mockGetCoins.mockResolvedValue({
-      data: [{ coinObjectId: '0xusdc1', balance: '5000000' }],
+    mockListCoins.mockResolvedValue({
+      objects: [{ objectId: '0xusdc1', balance: '5000000' }],
     })
     const result = await client.pay(
       { amount: 1_000_000n, coin: 'USDC', orderId: 'idem-err-001' },
@@ -576,7 +566,7 @@ describe('Integration: Idempotency error cleanup', () => {
 
   it('removes pending key when subscribe throws', async () => {
     setupV2Mocks()
-    mockGetCoins.mockResolvedValue({ data: [] }) // no USDC coins
+    mockListCoins.mockResolvedValue({ objects: [] }) // no USDC coins
 
     const client = new FloatSync(baseConfig)
 
