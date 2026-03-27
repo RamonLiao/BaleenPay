@@ -144,18 +144,21 @@ public struct VaultDeposited has copy, drop {
     amount: u64,
     merchant_id: ID,
     payer: address,
+    timestamp: u64,
 }
 
 public struct VaultWithdrawn has copy, drop {
     vault_id: ID,
     amount: u64,
     keeper: address,
+    timestamp: u64,
 }
 
 public struct YieldCredited has copy, drop {
     merchant_id: ID,
     amount: u64,
     source: u8,    // 0=manual, 1=stablelayer
+    timestamp: u64,
 }
 ```
 
@@ -171,8 +174,8 @@ public fun create_vault<T>(_admin: &AdminCap, ctx: &mut TxContext)
 public fun create_yield_vault<T>(_admin: &AdminCap, ctx: &mut TxContext)
 public fun set_keeper(_admin: &AdminCap, config: &mut RouterConfig, keeper: address)
 
-// Payment routing (called by payment module)
-public fun route_payment<T>(
+// Payment routing (called by payment module only — not externally callable)
+public(package) fun route_payment<T>(
     config: &RouterConfig,
     account: &mut MerchantAccount,
     vault: &mut Vault<T>,
@@ -180,8 +183,8 @@ public fun route_payment<T>(
     clock: &Clock,
     ctx: &TxContext,
 )
-// MODE_FALLBACK: transfer coin → merchant.owner
-// MODE_STABLELAYER: coin → vault.balance, emit VaultDeposited
+// assert mode == MODE_STABLELAYER (no fallback branch — SDK uses pay_once_v2 for fallback)
+// coin → vault.balance, emit VaultDeposited
 
 // Keeper operations (AdminCap-gated)
 public fun keeper_withdraw<T>(
@@ -221,7 +224,9 @@ public fun pay_once_routed<T>(
 // process_subscription — modified to call route_payment for period payments
 ```
 
-Existing `pay_once` / `pay_once_v2` retained for MODE_FALLBACK backward compatibility.
+Existing `pay_once` / `pay_once_v2` retained for MODE_FALLBACK. SDK selects function based on router mode query:
+- mode=0 → `pay_once_v2` (no Vault object needed, no shared object contention)
+- mode=1 → `pay_once_routed` (Vault required)
 
 ### Merchant Module (modified)
 
@@ -245,8 +250,8 @@ public(package) fun credit_external_yield(account: &mut MerchantAccount, amount:
 ### Function Call Chains
 
 ```
-pay_once_routed ──→ router::route_payment ──→ vault.balance.join (mode 1)
-                                           ──→ transfer to owner   (mode 0)
+pay_once_routed ──→ router::route_payment ──→ vault.balance.join (mode 1 only)
+  (SDK only calls pay_once_routed when mode=1; mode=0 uses pay_once_v2 directly)
 
 keeper_withdraw ──→ [SDK PTB: StableLayer.mint → vault_farm.receive]
 
@@ -281,6 +286,11 @@ claim_yield ──→ yield_vault.balance.split → transfer to merchant
 ```
 
 Note: Invariant 1 is temporarily broken after keeper_withdraw (USDC moves to StableLayer pool). `idle_principal` semantically covers "vault + StableLayer pool" combined. On-chain verification of StableLayer pool balance is not possible — this is an operator trust model tradeoff.
+
+### Phase 2 Risks (noted for future)
+
+- **Multi-vault type safety**: `claim_yield<T>` is generic — if multiple YieldVault types exist (e.g., `YieldVault<USDB>` + `YieldVault<USDC>` after Phase 2 auto-swap), merchant could claim `accrued_yield` from any vault with sufficient balance. Fix: store yield coin type in MerchantAccount or constrain at router level.
+- **Keeper batch scalability**: `keeper_deposit_yield` processes one MerchantAccount per call. At scale (100+ merchants), consider a batch version that takes a vector of (merchant_id, amount) pairs.
 
 ### Pause Behavior
 
