@@ -196,10 +196,41 @@ module floatsync::merchant {
         account.accrued_yield = account.accrued_yield + amount;
     }
 
+    /// Credit yield from external source (StableLayer keeper).
+    /// Only increases accrued_yield — does NOT deduct idle_principal.
+    /// This is different from credit_yield which moves from principal to yield.
+    public(package) fun credit_external_yield(account: &mut MerchantAccount, amount: u64) {
+        account.accrued_yield = account.accrued_yield + amount;
+    }
+
+    /// Reset accrued_yield to zero and return the previous value.
+    /// Used by router::claim_yield_v2 to avoid circular dependency.
+    public(package) fun reset_accrued_yield(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+    ): u64 {
+        assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        let amount = account.accrued_yield;
+        assert!(amount > 0, EZeroYield);
+        account.accrued_yield = 0;
+        amount
+    }
+
     #[test_only]
     /// Simulate yield accrual for testing claim_yield.
     public fun credit_yield_for_testing(account: &mut MerchantAccount, amount: u64) {
         credit_yield(account, amount);
+    }
+
+    #[test_only]
+    public fun credit_external_yield_for_testing(account: &mut MerchantAccount, amount: u64) {
+        credit_external_yield(account, amount);
+    }
+
+    #[test_only]
+    public fun add_payment_for_testing(account: &mut MerchantAccount, amount: u64) {
+        add_payment(account, amount);
     }
 
     // ── Getters (for tests and payment module) ──
