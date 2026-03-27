@@ -1,5 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiGrpcClient } from '@mysten/sui/grpc'
 
 /**
  * Get coins of a specific type owned by `owner`, merge them if needed,
@@ -13,7 +13,7 @@ import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
  */
 export async function prepareCoin(
   tx: Transaction,
-  client: SuiJsonRpcClient,
+  client: SuiGrpcClient,
   owner: string,
   coinType: string,
   amount: bigint,
@@ -26,7 +26,7 @@ export async function prepareCoin(
   }
 
   // Fetch all coins of this type
-  const { data: coins } = await client.getCoins({
+  const { objects: coins } = await client.listCoins({
     owner,
     coinType,
   })
@@ -48,13 +48,13 @@ export async function prepareCoin(
 
   if (coins.length === 1) {
     // Single coin — split from it
-    const coinRef = tx.object(coins[0].coinObjectId)
+    const coinRef = tx.object(coins[0].objectId)
     return tx.splitCoins(coinRef, [amount])
   }
 
   // Multiple coins — merge into first, then split
-  const primary = tx.object(coins[0].coinObjectId)
-  const rest = coins.slice(1).map(c => tx.object(c.coinObjectId))
+  const primary = tx.object(coins[0].objectId)
+  const rest = coins.slice(1).map(c => tx.object(c.objectId))
   tx.mergeCoins(primary, rest)
   return tx.splitCoins(primary, [amount])
 }

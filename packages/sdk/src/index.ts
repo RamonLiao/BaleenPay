@@ -18,7 +18,7 @@ export type {
   ObjectId,
 } from './types.js'
 
-export { ABORT_CODE_MAP, CLOCK_OBJECT_ID, MAX_ORDER_ID_LENGTH, ORDER_ID_REGEX } from './constants.js'
+export { ABORT_CODE_MAP, CLOCK_OBJECT_ID, MAX_ORDER_ID_LENGTH, ORDER_ID_REGEX, DEFAULT_GRPC_URLS, DEFAULT_GRAPHQL_URLS } from './constants.js'
 
 // Coins
 export { resolveCoin, coinTypeArg } from './coins/index.js'

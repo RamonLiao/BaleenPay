@@ -8,7 +8,7 @@ export function FloatSyncProvider({ config, options, children }: FloatSyncProvid
   const client = useMemo(
     () => new FloatSync(config, options),
     // Stable key: re-create only when identity-affecting config changes
-    [config.packageId, config.merchantId, config.network, config.rpcUrl, options?.pendingTtlMs],
+    [config.packageId, config.merchantId, config.network, config.grpcUrl, config.graphqlUrl, options?.pendingTtlMs],
   )
 
   return (

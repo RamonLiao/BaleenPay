@@ -1,5 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import type { FloatSyncConfig, PayParams } from '../types.js'
 import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 import { prepareCoin } from '../coins/helper.js'
@@ -30,7 +30,7 @@ function validateOrderId(orderId: string): void {
  * Handles coin resolution, merge/split, and orderId validation.
  */
 export async function buildPayOnceV2(
-  client: SuiJsonRpcClient,
+  client: SuiGrpcClient,
   config: FloatSyncConfig,
   params: PayParams,
   sender: string,
@@ -65,7 +65,7 @@ export async function buildPayOnceV2(
  * Build a legacy pay_once PTB (v1, no orderId dedup).
  */
 export async function buildPayOnce(
-  client: SuiJsonRpcClient,
+  client: SuiGrpcClient,
   config: FloatSyncConfig,
   params: Omit<PayParams, 'orderId'>,
   sender: string,

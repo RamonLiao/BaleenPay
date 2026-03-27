@@ -4,59 +4,81 @@ import type { ReactNode } from 'react'
 
 // ── Mocks ──
 
-// Mock @mysten/sui/jsonRpc (used by SDK internally)
-vi.mock('@mysten/sui/jsonRpc', () => {
-  class MockSuiJsonRpcClient {
-    url: string
-    constructor(opts: { url: string; network?: string }) {
-      this.url = opts.url
+vi.mock('@mysten/sui/grpc', () => {
+  class MockSuiGrpcClient {
+    baseUrl: string
+    network: string
+    constructor(opts: { baseUrl: string; network: string }) {
+      this.baseUrl = opts.baseUrl
+      this.network = opts.network
     }
     async getObject() {
       return {
-        data: {
-          content: {
-            dataType: 'moveObject',
-            fields: {
-              owner: '0xowner',
-              brand_name: 'TestBrand',
-              total_received: '1000',
-              idle_principal: '500',
-              accrued_yield: '50',
-              active_subscriptions: 2,
-              paused: false,
-            },
+        object: {
+          json: {
+            owner: '0xowner',
+            brand_name: 'TestBrand',
+            total_received: '1000',
+            idle_principal: '500',
+            accrued_yield: '50',
+            active_subscriptions: 2,
+            paused: false,
           },
         },
       }
     }
-    async queryEvents() {
-      return {
-        data: [
-          {
-            type: '0xpkg123::events::PaymentReceivedV2',
-            parsedJson: {
-              merchant_id: '0xmerchant456',
-              payer: '0xpayer1',
-              amount: '100',
-              payment_type: 0,
-              timestamp: '1700000000',
-              order_id: 'order-1',
-              coin_type: '0x2::sui::SUI',
-            },
-          },
-        ],
-        hasNextPage: false,
-        nextCursor: null,
-      }
+    async getMoveFunction() {
+      return { function: { name: 'pay_once_v2' } }
+    }
+    async listCoins() {
+      return { objects: [], hasNextPage: false }
+    }
+    async getCoinMetadata() {
+      return { coinMetadata: { decimals: 9 } }
     }
     async waitForTransaction() {
       return {}
     }
   }
-  return {
-    SuiJsonRpcClient: MockSuiJsonRpcClient,
-    getJsonRpcFullnodeUrl: (network: string) => `https://${network}.sui.io`,
+  return { SuiGrpcClient: MockSuiGrpcClient }
+})
+
+vi.mock('@mysten/sui/graphql', () => {
+  class MockSuiGraphQLClient {
+    url: string
+    network: string
+    constructor(opts: { url: string; network: string }) {
+      this.url = opts.url
+      this.network = opts.network
+    }
+    async query() {
+      return {
+        data: {
+          events: {
+            nodes: [
+              {
+                type: { repr: '0xpkg123::events::PaymentReceivedV2' },
+                contents: {
+                  json: {
+                    merchant_id: '0xmerchant456',
+                    payer: '0xpayer1',
+                    amount: '100',
+                    payment_type: 0,
+                    timestamp: '1700000000',
+                    order_id: 'order-1',
+                    coin_type: '0x2::sui::SUI',
+                  },
+                },
+                sender: { address: '0xpayer1' },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      }
+    }
   }
+  return { SuiGraphQLClient: MockSuiGraphQLClient }
 })
 
 // Mock dapp-kit-react

@@ -9,8 +9,10 @@ export interface FloatSyncConfig {
   merchantId: ObjectId
   registryId?: ObjectId
   routerConfigId?: ObjectId
-  /** Custom RPC/GraphQL endpoint. Defaults to public endpoint for the network. */
-  rpcUrl?: string
+  /** Custom gRPC endpoint. Defaults to Mysten public endpoint for the network. */
+  grpcUrl?: string
+  /** Custom GraphQL endpoint. Defaults to Mysten public endpoint for the network. */
+  graphqlUrl?: string
 }
 
 export interface PayParams {

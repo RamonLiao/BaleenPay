@@ -1,7 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  mockGetObject,
+  mockListCoins,
+  mockGetMoveFunction,
+  mockGraphQLQuery,
+  setupGrpcMock,
+  setupGraphQLMock,
+  mockV2Available,
+  makeGraphQLEventsResponse,
+} from './_mocks.js'
 import { FloatSync } from '../src/client.js'
 import { AdminClient } from '../src/admin.js'
 import { ValidationError } from '../src/errors.js'
+
+// Hoist mocks before any imports that use them
+setupGrpcMock()
+setupGraphQLMock()
 
 const baseConfig = {
   network: 'testnet' as const,
@@ -11,29 +25,8 @@ const baseConfig = {
   routerConfigId: '0xrouter',
 }
 
-// ── Mock SuiJsonRpcClient ──
-// We mock @mysten/sui/jsonRpc at the module level so FloatSync constructor works
-vi.mock('@mysten/sui/jsonRpc', () => {
-  const mockGetObject = vi.fn()
-  const mockQueryEvents = vi.fn()
-  const mockGetCoins = vi.fn()
-  const mockGetNormalizedMoveModule = vi.fn()
-
-  class MockSuiJsonRpcClient {
-    url: string
-    constructor(opts: { url: string; network?: string }) {
-      this.url = opts.url
-    }
-    getObject = mockGetObject
-    queryEvents = mockQueryEvents
-    getCoins = mockGetCoins
-    getNormalizedMoveModule = mockGetNormalizedMoveModule
-  }
-
-  return {
-    SuiJsonRpcClient: MockSuiJsonRpcClient,
-    getJsonRpcFullnodeUrl: (network: string) => `https://fullnode.${network}.sui.io:443`,
-  }
+beforeEach(() => {
+  vi.clearAllMocks()
 })
 
 describe('FloatSync client', () => {
@@ -41,7 +34,7 @@ describe('FloatSync client', () => {
     it('creates client with valid config', () => {
       const client = new FloatSync(baseConfig)
       expect(client.config).toEqual(baseConfig)
-      expect(client.suiClient).toBeDefined()
+      expect(client.rawClient).toBeDefined()
     })
 
     it('throws on missing packageId', () => {
@@ -56,9 +49,9 @@ describe('FloatSync client', () => {
       expect(() => new FloatSync({ ...baseConfig, network: '' as 'testnet' })).toThrow(ValidationError)
     })
 
-    it('uses custom rpcUrl when provided', () => {
-      const client = new FloatSync({ ...baseConfig, rpcUrl: 'https://custom.rpc' })
-      expect(client.suiClient.url).toBe('https://custom.rpc')
+    it('uses custom grpcUrl when provided', () => {
+      const client = new FloatSync({ ...baseConfig, grpcUrl: 'https://custom.grpc' })
+      expect(client.rawClient.baseUrl).toBe('https://custom.grpc')
     })
   })
 
@@ -119,25 +112,22 @@ describe('FloatSync client', () => {
   describe('getMerchant', () => {
     it('throws MERCHANT_NOT_FOUND when object not found', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null })
+      mockGetObject.mockResolvedValue({ object: null })
       await expect(client.getMerchant()).rejects.toThrow('not found')
     })
 
     it('deserializes merchant fields', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: {
-          content: {
-            dataType: 'moveObject',
-            fields: {
-              owner: '0xowner',
-              brand_name: 'TestBrand',
-              total_received: '1000000',
-              idle_principal: '500000',
-              accrued_yield: '50000',
-              active_subscriptions: 3,
-              paused: false,
-            },
+      mockGetObject.mockResolvedValue({
+        object: {
+          json: {
+            owner: '0xowner',
+            brand_name: 'TestBrand',
+            total_received: '1000000',
+            idle_principal: '500000',
+            accrued_yield: '50000',
+            active_subscriptions: 3,
+            paused: false,
           },
         },
       })
@@ -155,42 +145,38 @@ describe('FloatSync client', () => {
 
     it('queries custom merchantId', async () => {
       const client = new FloatSync(baseConfig)
-      const getObj = client.suiClient.getObject as ReturnType<typeof vi.fn>
-      getObj.mockResolvedValue({
-        data: {
-          content: {
-            dataType: 'moveObject',
-            fields: { owner: '0x1', brand_name: 'X', total_received: '0', idle_principal: '0', accrued_yield: '0', active_subscriptions: 0, paused: false },
+      mockGetObject.mockResolvedValue({
+        object: {
+          json: {
+            owner: '0x1', brand_name: 'X', total_received: '0',
+            idle_principal: '0', accrued_yield: '0', active_subscriptions: 0, paused: false,
           },
         },
       })
 
       await client.getMerchant('0xcustom')
-      expect(getObj).toHaveBeenCalledWith({ id: '0xcustom', options: { showContent: true } })
+      expect(mockGetObject).toHaveBeenCalledWith({ objectId: '0xcustom', include: { json: true } })
     })
   })
 
   describe('getSubscription', () => {
     it('throws when not found', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null })
+      mockGetObject.mockResolvedValue({ object: null })
       await expect(client.getSubscription('0xsub')).rejects.toThrow('not found')
     })
 
     it('deserializes subscription fields', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.getObject as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: {
-          content: {
-            dataType: 'moveObject',
-            fields: {
-              merchant_id: '0xmerchant',
-              payer: '0xpayer',
-              amount_per_period: '100000',
-              period_ms: 86400000,
-              next_due: 1711324800000,
-              balance: '300000',
-            },
+      mockGetObject.mockResolvedValue({
+        object: {
+          json: {
+            merchant_id: '0xmerchant',
+            payer: '0xpayer',
+            amount_per_period: '100000',
+            period_ms: 86400000,
+            next_due: 1711324800000,
+            balance: '300000',
           },
         },
       })
@@ -209,11 +195,11 @@ describe('FloatSync client', () => {
   describe('getPaymentHistory', () => {
     it('returns normalized events with pagination', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.queryEvents as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: [
-          {
+      mockGraphQLQuery.mockResolvedValue(
+        makeGraphQLEventsResponse(
+          [{
             type: `${baseConfig.packageId}::events::PaymentReceivedV2`,
-            parsedJson: {
+            json: {
               merchant_id: '0xmerchant',
               payer: '0xpayer',
               amount: '500000',
@@ -222,11 +208,10 @@ describe('FloatSync client', () => {
               order_id: 'order-1',
               coin_type: '0x2::sui::SUI',
             },
-          },
-        ],
-        nextCursor: { txDigest: '0xabc', eventSeq: '0' },
-        hasNextPage: true,
-      })
+          }],
+          { hasNextPage: true, endCursor: 'cursor123' },
+        ),
+      )
 
       const result = await client.getPaymentHistory({ limit: 10 })
       expect(result.events).toHaveLength(1)
@@ -238,20 +223,18 @@ describe('FloatSync client', () => {
 
     it('filters by payer client-side', async () => {
       const client = new FloatSync(baseConfig)
-      ;(client.suiClient.queryEvents as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: [
+      mockGraphQLQuery.mockResolvedValue(
+        makeGraphQLEventsResponse([
           {
             type: `${baseConfig.packageId}::events::PaymentReceivedV2`,
-            parsedJson: { merchant_id: '0xm', payer: '0xA', amount: '100', payment_type: 0, timestamp: 1000, order_id: 'o1', coin_type: 'SUI' },
+            json: { merchant_id: '0xm', payer: '0xA', amount: '100', payment_type: 0, timestamp: 1000, order_id: 'o1', coin_type: 'SUI' },
           },
           {
             type: `${baseConfig.packageId}::events::PaymentReceivedV2`,
-            parsedJson: { merchant_id: '0xm', payer: '0xB', amount: '200', payment_type: 0, timestamp: 2000, order_id: 'o2', coin_type: 'SUI' },
+            json: { merchant_id: '0xm', payer: '0xB', amount: '200', payment_type: 0, timestamp: 2000, order_id: 'o2', coin_type: 'SUI' },
           },
-        ],
-        nextCursor: null,
-        hasNextPage: false,
-      })
+        ]),
+      )
 
       const result = await client.getPaymentHistory({ payer: '0xA' })
       expect(result.events).toHaveLength(1)
