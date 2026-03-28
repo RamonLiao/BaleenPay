@@ -1,8 +1,5 @@
 'use client'
 
-import { useMerchant, usePaymentHistory, useYieldInfo, useYieldHistory, useClaimYield } from '@floatsync/react'
-import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
-import { buildClaimYield, buildSelfPause, buildSelfUnpause } from '@floatsync/sdk'
 import { useState } from 'react'
 import { WalletGuard } from '@/components/WalletGuard'
 import { TxStatus } from '@/components/TxStatus'
@@ -10,18 +7,29 @@ import { StatCard } from '@/components/StatCard'
 import { PaymentTable } from '@/components/PaymentTable'
 import { YieldChart } from '@/components/YieldChart'
 import { ClaimHistory } from '@/components/ClaimHistory'
-import { DEMO_CONFIG, MERCHANT_CAP_ID } from '@/lib/config'
+import { MERCHANT_CAP_ID } from '@/lib/config'
 import { formatAmount } from '@/lib/format'
+import {
+  useMerchantHook,
+  usePaymentHistoryHook,
+  useYieldInfoHook,
+  useYieldHistoryHook,
+  useClaimYieldHook,
+  useDAppKitHook,
+  useCurrentAccountHook,
+} from '@/lib/hooks'
 import type { MutationStatus } from '@floatsync/react'
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
 export default function DashboardPage() {
-  const account = useCurrentAccount()
-  const dAppKit = useDAppKit()
-  const { merchant, isLoading: merchantLoading, refetch: refetchMerchant } = useMerchant()
-  const { events, isLoading: historyLoading, hasNextPage, fetchNextPage } = usePaymentHistory()
-  const { yieldInfo, isLoading: yieldInfoLoading } = useYieldInfo()
-  const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistory()
-  const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYield()
+  const account = useCurrentAccountHook()
+  const dAppKit = useDAppKitHook()
+  const { merchant, isLoading: merchantLoading, refetch: refetchMerchant } = useMerchantHook()
+  const { events, isLoading: historyLoading, hasNextPage, fetchNextPage } = usePaymentHistoryHook()
+  const { yieldInfo, isLoading: yieldInfoLoading } = useYieldInfoHook()
+  const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistoryHook()
+  const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYieldHook()
 
   const isPaused = merchant?.pausedByAdmin || merchant?.pausedBySelf || false
 
@@ -40,9 +48,17 @@ export default function DashboardPage() {
     try {
       resetAction()
       setActionStatus('signing')
+
+      if (DEMO_MODE) {
+        // Simulate tx in demo mode
+        await new Promise((r) => setTimeout(r, 1000))
+        setActionDigest('0xmock_admin_digest')
+        setActionStatus('success')
+        return
+      }
+
       const tx = buildFn()
       const result = await dAppKit.signAndExecuteTransaction({ transaction: tx })
-      // NOTE: v2 dapp-kit returns flat result with .digest — v1 pattern (FailedTransaction/Transaction) kept for now
       if (result.FailedTransaction) {
         throw new Error(result.FailedTransaction.status.error?.message ?? 'Transaction failed')
       }
@@ -184,11 +200,14 @@ export default function DashboardPage() {
                 </p>
                 <button
                   onClick={() =>
-                    executeAdminTx(() =>
-                      isPaused
+                    executeAdminTx(() => {
+                      // In demo mode executeAdminTx never calls this
+                      const { buildSelfPause, buildSelfUnpause } = require('@floatsync/sdk')
+                      const { DEMO_CONFIG } = require('@/lib/config')
+                      return isPaused
                         ? buildSelfUnpause(DEMO_CONFIG, MERCHANT_CAP_ID)
                         : buildSelfPause(DEMO_CONFIG, MERCHANT_CAP_ID)
-                    )
+                    })
                   }
                   disabled={actionStatus !== 'idle' && actionStatus !== 'error' && actionStatus !== 'rejected'}
                   className={`rounded-xl px-6 py-2.5 text-sm font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${

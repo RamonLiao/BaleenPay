@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { usePayment } from '@floatsync/react'
 import { WalletGuard } from '@/components/WalletGuard'
 import { TxStatus } from '@/components/TxStatus'
 import { CoinToggle } from '@/components/CoinToggle'
 import { ProductCard } from '@/components/ProductCard'
 import { DEMO_PRODUCTS, priceToAmount } from '@/lib/products'
+import { usePaymentHook } from '@/lib/hooks'
 
 export default function CheckoutPage() {
   const [selectedId, setSelectedId] = useState('pro')
   const [coin, setCoin] = useState('USDC')
-  const { pay, status, error, result, reset } = usePayment()
+  const { pay, status, error, result, reset } = usePaymentHook()
 
   const product = DEMO_PRODUCTS.find((p) => p.id === selectedId)!
   const amount = priceToAmount(product.priceUsd, coin)

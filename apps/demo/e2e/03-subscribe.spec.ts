@@ -1,4 +1,4 @@
-import { test, walletPause } from './demo.fixture'
+import { test } from './demo.fixture'
 
 test('03 — Subscribe: Recurring Payments', async ({ page }) => {
   await page.goto('/subscribe')
@@ -9,13 +9,7 @@ test('03 — Subscribe: Recurring Payments', async ({ page }) => {
   await page.locator('button', { hasText: 'Annual' }).click()
   await page.waitForTimeout(500)
 
-  // If wallet not connected yet (running standalone), pause for connect
-  const walletGuard = page.locator('h2:has-text("Connect Your Wallet")')
-  if (await walletGuard.isVisible()) {
-    await walletPause(page, 'Connect your Sui Wallet')
-  }
-
-  // Wait for subscription card
+  // Subscription card visible (no wallet guard in demo mode)
   await page.waitForSelector('h2:has-text("Subscription Summary")')
   await page.waitForTimeout(500)
 
@@ -25,12 +19,8 @@ test('03 — Subscribe: Recurring Payments', async ({ page }) => {
 
   // Click Subscribe
   await page.locator('button:has-text("Subscribe")').click()
-  await page.waitForTimeout(300)
 
-  // Sign transaction
-  await walletPause(page, 'Sign the subscription transaction')
-
-  // Wait for success
-  await page.waitForSelector('text=Subscription Active', { timeout: 30_000 })
+  // Wait for simulated success
+  await page.waitForSelector('text=Subscription Active', { timeout: 10_000 })
   await page.waitForTimeout(2000)
 })
