@@ -1,9 +1,9 @@
-import type { FloatSyncEventData } from '@floatsync/sdk'
+import type { BaleenPayEventData } from '@baleenpay/sdk'
 import { truncateAddress, formatAmount, formatDate } from '@/lib/format'
 import { SUISCAN_URL } from '@/lib/config'
 
 interface PaymentTableProps {
-  events: FloatSyncEventData[]
+  events: BaleenPayEventData[]
   isLoading: boolean
   hasNextPage: boolean
   onLoadMore: () => void

@@ -13,6 +13,6 @@ export default defineConfig({
     '@mysten/dapp-kit-react',
     '@mysten/dapp-kit-core',
     '@mysten/sui',
-    '@floatsync/sdk',
+    '@baleenpay/sdk',
   ],
 })

@@ -9,7 +9,7 @@ import {
   mockV2Available,
   makeGraphQLEventsResponse,
 } from './_mocks.js'
-import { FloatSync } from '../src/client.js'
+import { BaleenPay } from '../src/client.js'
 import { AdminClient } from '../src/admin.js'
 import { ValidationError } from '../src/errors.js'
 
@@ -29,37 +29,37 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('FloatSync client', () => {
+describe('BaleenPay client', () => {
   describe('construction', () => {
     it('creates client with valid config', () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       expect(client.config).toEqual(baseConfig)
       expect(client.rawClient).toBeDefined()
     })
 
     it('throws on missing packageId', () => {
-      expect(() => new FloatSync({ ...baseConfig, packageId: '' })).toThrow(ValidationError)
+      expect(() => new BaleenPay({ ...baseConfig, packageId: '' })).toThrow(ValidationError)
     })
 
     it('throws on missing merchantId', () => {
-      expect(() => new FloatSync({ ...baseConfig, merchantId: '' })).toThrow(ValidationError)
+      expect(() => new BaleenPay({ ...baseConfig, merchantId: '' })).toThrow(ValidationError)
     })
 
     it('throws on missing network', () => {
-      expect(() => new FloatSync({ ...baseConfig, network: '' as 'testnet' })).toThrow(ValidationError)
+      expect(() => new BaleenPay({ ...baseConfig, network: '' as 'testnet' })).toThrow(ValidationError)
     })
 
     it('uses custom grpcUrl when provided', () => {
-      const client = new FloatSync({ ...baseConfig, grpcUrl: 'https://custom.grpc' })
+      const client = new BaleenPay({ ...baseConfig, grpcUrl: 'https://custom.grpc' })
       expect(client.rawClient.baseUrl).toBe('https://custom.grpc')
     })
   })
 
   describe('synchronous methods return TransactionResult', () => {
-    let client: FloatSync
+    let client: BaleenPay
 
     beforeEach(() => {
-      client = new FloatSync(baseConfig)
+      client = new BaleenPay(baseConfig)
     })
 
     it('registerMerchant returns tx', () => {
@@ -68,7 +68,7 @@ describe('FloatSync client', () => {
     })
 
     it('claimYield returns tx', () => {
-      const c = new FloatSync({ ...baseConfig, yieldVaultId: '0xYV' })
+      const c = new BaleenPay({ ...baseConfig, yieldVaultId: '0xYV' })
       const result = c.claimYield('0xcap', 'USDC')
       expect(result.tx).toBeDefined()
     })
@@ -96,7 +96,7 @@ describe('FloatSync client', () => {
 
   describe('idempotency guard integration', () => {
     it('exposes idempotencyGuard', () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       expect(client.idempotencyGuard).toBeDefined()
       expect(client.idempotencyGuard.size).toBe(0)
     })
@@ -104,7 +104,7 @@ describe('FloatSync client', () => {
 
   describe('event delegation', () => {
     it('on() returns unsubscribe function', () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       const unsub = client.on('payment.received', () => {})
       expect(typeof unsub).toBe('function')
     })
@@ -112,13 +112,13 @@ describe('FloatSync client', () => {
 
   describe('getMerchant', () => {
     it('throws MERCHANT_NOT_FOUND when object not found', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGetObject.mockResolvedValue({ object: null })
       await expect(client.getMerchant()).rejects.toThrow('not found')
     })
 
     it('deserializes merchant fields', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGetObject.mockResolvedValue({
         object: {
           json: {
@@ -147,7 +147,7 @@ describe('FloatSync client', () => {
     })
 
     it('queries custom merchantId', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGetObject.mockResolvedValue({
         object: {
           json: {
@@ -164,13 +164,13 @@ describe('FloatSync client', () => {
 
   describe('getSubscription', () => {
     it('throws when not found', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGetObject.mockResolvedValue({ object: null })
       await expect(client.getSubscription('0xsub')).rejects.toThrow('not found')
     })
 
     it('deserializes subscription fields', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGetObject.mockResolvedValue({
         object: {
           json: {
@@ -197,7 +197,7 @@ describe('FloatSync client', () => {
 
   describe('getPaymentHistory', () => {
     it('returns normalized events with pagination', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGraphQLQuery.mockResolvedValue(
         makeGraphQLEventsResponse(
           [{
@@ -225,7 +225,7 @@ describe('FloatSync client', () => {
     })
 
     it('filters by payer client-side', async () => {
-      const client = new FloatSync(baseConfig)
+      const client = new BaleenPay(baseConfig)
       mockGraphQLQuery.mockResolvedValue(
         makeGraphQLEventsResponse([
           {

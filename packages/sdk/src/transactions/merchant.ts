@@ -1,8 +1,8 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { FloatSyncConfig, RegisterParams } from '../types.js'
+import type { BaleenPayConfig, RegisterParams } from '../types.js'
 
 export function buildRegisterMerchant(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: RegisterParams,
 ): Transaction {
   const tx = new Transaction()
@@ -23,7 +23,7 @@ export function buildRegisterMerchant(
 }
 
 export function buildSelfPause(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   merchantCapId: string,
 ): Transaction {
   const tx = new Transaction()
@@ -38,7 +38,7 @@ export function buildSelfPause(
 }
 
 export function buildSelfUnpause(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   merchantCapId: string,
 ): Transaction {
   const tx = new Transaction()

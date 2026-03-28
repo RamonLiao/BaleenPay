@@ -1,7 +1,7 @@
 /**
  * Hook barrel for demo mode.
  * When NEXT_PUBLIC_DEMO_MODE=true, exports mock hooks (no wallet/chain needed).
- * To use real hooks, remove .env.local and import directly from @floatsync/react.
+ * To use real hooks, remove .env.local and import directly from @baleenpay/react.
  */
 'use client'
 

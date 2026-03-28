@@ -3,7 +3,7 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import type {
-  FloatSyncConfig,
+  BaleenPayConfig,
   PayParams,
   SubscribeParams,
   FundParams,
@@ -12,8 +12,8 @@ import type {
   TransactionResult,
   MerchantInfo,
   SubscriptionInfo,
-  FloatSyncEventName,
-  FloatSyncEventData,
+  BaleenPayEventName,
+  BaleenPayEventData,
   EventCallback,
   Unsubscribe,
   ObjectId,
@@ -37,20 +37,20 @@ import {
   buildFundSubscription,
 } from './transactions/subscription.js'
 
-export interface FloatSyncClientOptions {
+export interface BaleenPayClientOptions {
   /** Pending idempotency TTL in ms. Default: 60000 */
   pendingTtlMs?: number
 }
 
-export class FloatSync {
-  readonly config: FloatSyncConfig
+export class BaleenPay {
+  readonly config: BaleenPayConfig
   private readonly grpcClient: SuiGrpcClient
   private readonly graphqlClient: SuiGraphQLClient
   private readonly idempotency: IdempotencyGuard
   private readonly events: EventStream
   private versionCache?: VersionInfo
 
-  constructor(config: FloatSyncConfig, options?: FloatSyncClientOptions) {
+  constructor(config: BaleenPayConfig, options?: BaleenPayClientOptions) {
     if (!config.packageId) throw new ValidationError('MISSING_PACKAGE_ID', 'packageId is required')
     if (!config.merchantId) throw new ValidationError('MISSING_MERCHANT_ID', 'merchantId is required')
     if (!config.network) throw new ValidationError('MISSING_NETWORK', 'network is required')
@@ -232,8 +232,8 @@ export class FloatSync {
 
   // ── Events ──
 
-  /** Subscribe to FloatSync on-chain events. */
-  on(event: FloatSyncEventName, callback: EventCallback, filter?: Record<string, unknown>): Unsubscribe {
+  /** Subscribe to BaleenPay on-chain events. */
+  on(event: BaleenPayEventName, callback: EventCallback, filter?: Record<string, unknown>): Unsubscribe {
     return this.events.on(event, callback, filter)
   }
 
@@ -283,7 +283,7 @@ export class FloatSync {
    * Returns normalized v1/v2 events.
    */
   async getPaymentHistory(params?: QueryParams & { payer?: string }): Promise<{
-    events: FloatSyncEventData[]
+    events: BaleenPayEventData[]
     nextCursor?: string
     hasNextPage: boolean
   }> {

@@ -8,7 +8,7 @@ import {
   mockV2Available,
   mockDefaultCoins,
 } from './_mocks.js'
-import { FloatSync } from '../src/client.js'
+import { BaleenPay } from '../src/client.js'
 import { ValidationError } from '../src/errors.js'
 
 // Hoist mocks before any imports that use them
@@ -35,23 +35,23 @@ beforeEach(() => {
 
 describe('Monkey: Invalid config', () => {
   it('throws on empty packageId', () => {
-    expect(() => new FloatSync({ ...baseConfig, packageId: '' })).toThrow(ValidationError)
+    expect(() => new BaleenPay({ ...baseConfig, packageId: '' })).toThrow(ValidationError)
   })
 
   it('throws on empty merchantId', () => {
-    expect(() => new FloatSync({ ...baseConfig, merchantId: '' })).toThrow(ValidationError)
+    expect(() => new BaleenPay({ ...baseConfig, merchantId: '' })).toThrow(ValidationError)
   })
 
   it('throws on missing network', () => {
-    expect(() => new FloatSync({ ...baseConfig, network: '' as 'testnet' })).toThrow(ValidationError)
+    expect(() => new BaleenPay({ ...baseConfig, network: '' as 'testnet' })).toThrow(ValidationError)
   })
 
   it('throws on undefined packageId', () => {
-    expect(() => new FloatSync({ ...baseConfig, packageId: undefined as unknown as string })).toThrow()
+    expect(() => new BaleenPay({ ...baseConfig, packageId: undefined as unknown as string })).toThrow()
   })
 
   it('throws on undefined merchantId', () => {
-    expect(() => new FloatSync({ ...baseConfig, merchantId: undefined as unknown as string })).toThrow()
+    expect(() => new BaleenPay({ ...baseConfig, merchantId: undefined as unknown as string })).toThrow()
   })
 })
 
@@ -60,10 +60,10 @@ describe('Monkey: Invalid config', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Monkey: Invalid orderId', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('rejects empty orderId', async () => {
@@ -155,10 +155,10 @@ describe('Monkey: Invalid orderId', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Monkey: Invalid amounts', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('rejects amount = 0', async () => {
@@ -191,10 +191,10 @@ describe('Monkey: Invalid amounts', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Monkey: Invalid subscription params', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   const validSub = {
@@ -261,10 +261,10 @@ describe('Monkey: Invalid subscription params', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Monkey: Invalid coin', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('rejects unknown coin shorthand', async () => {
@@ -291,10 +291,10 @@ describe('Monkey: Invalid coin', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Monkey: Query edge cases', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('getMerchant throws on null object', async () => {
@@ -333,7 +333,7 @@ describe('Monkey: Query edge cases', () => {
 
 describe('Monkey: Concurrent idempotency', () => {
   it('parallel pays with same orderId — first wins, rest get DUPLICATE_PENDING', async () => {
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
 
     // Fire 5 concurrent pays with same orderId
     const promises = Array.from({ length: 5 }, (_, i) =>
@@ -354,7 +354,7 @@ describe('Monkey: Concurrent idempotency', () => {
   })
 
   it('different orderIds can proceed in parallel', async () => {
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
 
     const promises = Array.from({ length: 3 }, (_, i) =>
       client.pay({ amount: 1000n, coin: 'SUI', orderId: `parallel-${i}` }, SENDER),

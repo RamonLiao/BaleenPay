@@ -1,12 +1,12 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { TransactionArgument } from '@mysten/sui/transactions'
-import type { FloatSyncConfig, KeeperParams } from '../types.js'
+import type { BaleenPayConfig, KeeperParams } from '../types.js'
 import { StableLayerClient } from '../stablelayer/client.js'
 import { STABLELAYER_CONFIG } from '../stablelayer/constants.js'
 import { coinTypeArg } from '../coins/registry.js'
 
 export function buildKeeperWithdraw(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   keeper: KeeperParams,
   amount: bigint,
   coinType: string,
@@ -29,7 +29,7 @@ export function buildKeeperWithdraw(
 
 export function buildKeeperDepositYield(
   tx: Transaction,
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   keeper: KeeperParams,
   yieldCoin: TransactionArgument,
   yieldCoinType: string,
@@ -48,7 +48,7 @@ export function buildKeeperDepositYield(
 }
 
 export function buildKeeperDeposit(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   keeper: KeeperParams,
   amount: bigint,
   coinType: string,
@@ -78,7 +78,7 @@ export function buildKeeperDeposit(
 }
 
 export function buildKeeperHarvest(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   keeper: KeeperParams,
   merchantId: string,
   yieldCoinType: string,

@@ -1,6 +1,6 @@
 'use client'
 
-import type { ClaimEvent } from '@floatsync/react'
+import type { ClaimEvent } from '@baleenpay/react'
 import { formatAmount, formatDate, truncateAddress } from '@/lib/format'
 
 interface ClaimHistoryProps {

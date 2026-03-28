@@ -1,12 +1,12 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
-import type { FloatSyncConfig, FundParams, ObjectId } from '../types.js'
+import type { BaleenPayConfig, FundParams, ObjectId } from '../types.js'
 import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 import { prepareCoin } from '../coins/helper.js'
 import { CLOCK_OBJECT_ID } from '../constants.js'
 
 export function buildProcessSubscription(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   subscriptionId: ObjectId,
   coinType: string,
 ): Transaction {
@@ -24,7 +24,7 @@ export function buildProcessSubscription(
 }
 
 export function buildCancelSubscription(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   subscriptionId: ObjectId,
   coinType: string,
 ): Transaction {
@@ -42,7 +42,7 @@ export function buildCancelSubscription(
 
 export async function buildFundSubscription(
   client: SuiGrpcClient,
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: FundParams,
   sender: string,
 ): Promise<Transaction> {

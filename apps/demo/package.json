@@ -1,5 +1,5 @@
 {
-  "name": "@floatsync/demo",
+  "name": "@baleenpay/demo",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "demo": "npx playwright test --config e2e/playwright.config.ts --headed"
   },
   "dependencies": {
-    "@floatsync/react": "workspace:*",
-    "@floatsync/sdk": "workspace:*",
+    "@baleenpay/react": "workspace:*",
+    "@baleenpay/sdk": "workspace:*",
     "@mysten/dapp-kit-core": "^1.2.0",
     "@mysten/dapp-kit-react": "^2.0.0",
     "@mysten/sui": "^2.8.0",

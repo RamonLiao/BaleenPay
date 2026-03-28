@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { buildRegisterMerchant, buildSelfPause, buildClaimYield } from '../src/transactions/index.js'
-import type { FloatSyncConfig } from '../src/types.js'
+import type { BaleenPayConfig } from '../src/types.js'
 
-const config: FloatSyncConfig = {
+const config: BaleenPayConfig = {
   network: 'testnet',
   packageId: '0x1234',
   merchantId: '0xabcd',

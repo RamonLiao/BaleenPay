@@ -1,7 +1,7 @@
 // packages/sdk/src/events/stream.ts
 
 import type { SuiGraphQLClient } from '@mysten/sui/graphql'
-import type { EventCallback, FloatSyncEventData, FloatSyncEventName, Unsubscribe } from '../types.js'
+import type { EventCallback, BaleenPayEventData, BaleenPayEventName, Unsubscribe } from '../types.js'
 import { normalizeEvent } from './types.js'
 import { QUERY_EVENTS } from './queries.js'
 import type { QueryEventsResult } from './queries.js'
@@ -24,7 +24,7 @@ export class EventStream {
   }
 
   on(
-    event: FloatSyncEventName,
+    event: BaleenPayEventName,
     callback: EventCallback,
     filter?: Record<string, unknown>,
   ): Unsubscribe {
@@ -91,7 +91,7 @@ export class EventStream {
   }
 
   /** Dispatch an event to matching listeners. Exposed for testing. */
-  dispatch(event: FloatSyncEventData): void {
+  dispatch(event: BaleenPayEventData): void {
     const dispatch = (entries: Set<ListenerEntry> | undefined) => {
       if (!entries) return
       for (const entry of entries) {
@@ -106,7 +106,7 @@ export class EventStream {
     dispatch(this.listeners.get('*'))
   }
 
-  private matchesFilter(event: FloatSyncEventData, filter: Record<string, unknown>): boolean {
+  private matchesFilter(event: BaleenPayEventData, filter: Record<string, unknown>): boolean {
     for (const [key, value] of Object.entries(filter)) {
       if (event[key] !== value) return false
     }

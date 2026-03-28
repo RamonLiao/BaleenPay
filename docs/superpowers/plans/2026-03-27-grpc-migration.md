@@ -16,7 +16,7 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `packages/sdk/src/types.ts` | Modify | `FloatSyncConfig`: remove `rpcUrl`, add `grpcUrl?` + `graphqlUrl?` |
+| `packages/sdk/src/types.ts` | Modify | `BaleenPayConfig`: remove `rpcUrl`, add `grpcUrl?` + `graphqlUrl?` |
 | `packages/sdk/src/constants.ts` | Modify | Replace `DEFAULT_RPC_URLS` with `DEFAULT_GRPC_URLS` + `DEFAULT_GRAPHQL_URLS` |
 | `packages/sdk/src/coins/helper.ts` | Modify | `SuiJsonRpcClient` → `SuiGrpcClient`, `getCoins` → `listCoins` |
 | `packages/sdk/src/coins/validator.ts` | Modify | `SuiJsonRpcClient` → `SuiGrpcClient`, `getCoinMetadata` response shape |
@@ -42,12 +42,12 @@
 - Modify: `packages/sdk/src/constants.ts:3-9`
 - Modify: `packages/sdk/src/index.ts:21`
 
-- [ ] **Step 1: Update `FloatSyncConfig` in types.ts**
+- [ ] **Step 1: Update `BaleenPayConfig` in types.ts**
 
 Replace the `rpcUrl` field with `grpcUrl` and `graphqlUrl`:
 
 ```ts
-export interface FloatSyncConfig {
+export interface BaleenPayConfig {
   network: 'mainnet' | 'testnet' | 'devnet'
   packageId: ObjectId
   merchantId: ObjectId
@@ -344,7 +344,7 @@ export interface QueryEventsResult {
 // packages/sdk/src/events/stream.ts
 
 import type { SuiGraphQLClient } from '@mysten/sui/graphql'
-import type { EventCallback, FloatSyncEventData, FloatSyncEventName, Unsubscribe } from '../types.js'
+import type { EventCallback, BaleenPayEventData, BaleenPayEventName, Unsubscribe } from '../types.js'
 import { normalizeEvent } from './types.js'
 import { QUERY_EVENTS } from './queries.js'
 import type { QueryEventsResult } from './queries.js'
@@ -367,7 +367,7 @@ export class EventStream {
   }
 
   on(
-    event: FloatSyncEventName,
+    event: BaleenPayEventName,
     callback: EventCallback,
     filter?: Record<string, unknown>,
   ): Unsubscribe {
@@ -434,7 +434,7 @@ export class EventStream {
   }
 
   /** Dispatch an event to matching listeners. Exposed for testing. */
-  dispatch(event: FloatSyncEventData): void {
+  dispatch(event: BaleenPayEventData): void {
     const dispatch = (entries: Set<ListenerEntry> | undefined) => {
       if (!entries) return
       for (const entry of entries) {
@@ -449,7 +449,7 @@ export class EventStream {
     dispatch(this.listeners.get('*'))
   }
 
-  private matchesFilter(event: FloatSyncEventData, filter: Record<string, unknown>): boolean {
+  private matchesFilter(event: BaleenPayEventData, filter: Record<string, unknown>): boolean {
     for (const [key, value] of Object.entries(filter)) {
       if (event[key] !== value) return false
     }
@@ -491,7 +491,7 @@ This is the main integration point. All sub-modules are already migrated.
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import type {
-  FloatSyncConfig,
+  BaleenPayConfig,
   PayParams,
   SubscribeParams,
   FundParams,
@@ -500,8 +500,8 @@ import type {
   TransactionResult,
   MerchantInfo,
   SubscriptionInfo,
-  FloatSyncEventName,
-  FloatSyncEventData,
+  BaleenPayEventName,
+  BaleenPayEventData,
   EventCallback,
   Unsubscribe,
   ObjectId,
@@ -524,20 +524,20 @@ import {
 import { QUERY_EVENTS } from './events/queries.js'
 import type { QueryEventsResult } from './events/queries.js'
 
-export interface FloatSyncClientOptions {
+export interface BaleenPayClientOptions {
   /** Pending idempotency TTL in ms. Default: 60000 */
   pendingTtlMs?: number
 }
 
-export class FloatSync {
-  readonly config: FloatSyncConfig
+export class BaleenPay {
+  readonly config: BaleenPayConfig
   private readonly grpcClient: SuiGrpcClient
   private readonly graphqlClient: SuiGraphQLClient
   private readonly idempotency: IdempotencyGuard
   private readonly events: EventStream
   private versionCache?: VersionInfo
 
-  constructor(config: FloatSyncConfig, options?: FloatSyncClientOptions) {
+  constructor(config: BaleenPayConfig, options?: BaleenPayClientOptions) {
     if (!config.packageId) throw new ValidationError('MISSING_PACKAGE_ID', 'packageId is required')
     if (!config.merchantId) throw new ValidationError('MISSING_MERCHANT_ID', 'merchantId is required')
     if (!config.network) throw new ValidationError('MISSING_NETWORK', 'network is required')
@@ -653,7 +653,7 @@ export class FloatSync {
 
   // ── Events ──
 
-  on(event: FloatSyncEventName, callback: EventCallback, filter?: Record<string, unknown>): Unsubscribe {
+  on(event: BaleenPayEventName, callback: EventCallback, filter?: Record<string, unknown>): Unsubscribe {
     return this.events.on(event, callback, filter)
   }
 
@@ -697,7 +697,7 @@ export class FloatSync {
   }
 
   async getPaymentHistory(params?: QueryParams & { payer?: string }): Promise<{
-    events: FloatSyncEventData[]
+    events: BaleenPayEventData[]
     nextCursor?: string
     hasNextPage: boolean
   }> {
@@ -938,7 +938,7 @@ Expected: PASS
 
 - [ ] **Step 3: React package typecheck + tests**
 
-The React package imports `FloatSync` and `FloatSyncConfig` from `@floatsync/sdk`. Since `FloatSyncConfig.rpcUrl` was removed, check if any React code references it.
+The React package imports `BaleenPay` and `BaleenPayConfig` from `@baleenpay/sdk`. Since `BaleenPayConfig.rpcUrl` was removed, check if any React code references it.
 
 Run: `cd packages/react && npx tsc --noEmit && pnpm test`
 Expected: PASS (React provider only passes config through, doesn't reference `rpcUrl`)

@@ -24,7 +24,7 @@ function DemoNav() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur shadow-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/" className="text-xl font-bold text-ocean-water">FloatSync</a>
+        <a href="/" className="text-xl font-bold text-ocean-water">BaleenPay</a>
         <div className="flex items-center gap-6">
           {[
             { href: '/checkout', label: 'Checkout' },

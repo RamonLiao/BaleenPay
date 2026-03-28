@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { Transaction } from '@mysten/sui/transactions'
 import { buildPayOnceRouted } from '../src/transactions/pay.js'
 import { buildClaimYield } from '../src/transactions/yield.js'
-import type { FloatSyncConfig, PayParams } from '../src/types.js'
+import type { BaleenPayConfig, PayParams } from '../src/types.js'
 
-const config: FloatSyncConfig = {
+const config: BaleenPayConfig = {
   network: 'testnet',
   packageId: '0xPACKAGE',
   merchantId: '0xMERCHANT',

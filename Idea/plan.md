@@ -1,17 +1,17 @@
-# FloatSync Project Plan & Notes
+# BaleenPay Project Plan & Notes
 
 ## 本次工作重點 (Latest Update)
 - **做了什麼**:
-  - 將專案命名為 **FloatSync**。
-  - 將原本的 `StableLayer-SaaS-Widget` 專案目錄重新命名為 `FloatSync`。
-  - 更新了 `README.md` 的標題與簡要敘述，加入 FloatSync 的品牌設計理念。
+  - 將專案命名為 **BaleenPay**。
+  - 將原本的 `StableLayer-SaaS-Widget` 專案目錄重新命名為 `BaleenPay`。
+  - 更新了 `README.md` 的標題與簡要敘述，加入 BaleenPay 的品牌設計理念。
   - 建立了本文件 (`plan.md`) 來記錄專案目標與未來決策。
 - **更動了哪些檔案**:
   - 目錄名稱變更
   - `README.md` (標題與簡介更新)
   - `plan.md` (NEW)
 - **決策原因**:
-  - **FloatSync** 這個名稱精準點出 SaaS 平台的 Payment Float (在途資金) 痛點，並具有與底層生息網路自動同步 (Sync) 的專業科技感與極簡商務風格。經調查，Web3/Fintech 領域目前無同名專案，且 GitHub 名稱亦為空缺，具有高可塑性。
+  - **BaleenPay** 這個名稱精準點出 SaaS 平台的 Payment Float (在途資金) 痛點，並具有與底層生息網路自動同步 (Sync) 的專業科技感與極簡商務風格。經調查，Web3/Fintech 領域目前無同名專案，且 GitHub 名稱亦為空缺，具有高可塑性。
 - **尚未完成的 TODO**:
   - 初始化前端結構（例如 Next.js + shadcn/ui）作為 Demo Widget。
   - 規劃前端與 Move 智能合約（整合 StableLayer）的對接設計。

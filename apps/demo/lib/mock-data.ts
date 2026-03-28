@@ -5,7 +5,7 @@ export const MOCK_ACCOUNT = {
 }
 
 export const MOCK_MERCHANT = {
-  brandName: 'FloatSync Demo Store',
+  brandName: 'BaleenPay Demo Store',
   totalReceived: 2_847_500_000n, // 2,847.5 USDC
   idlePrincipal: 1_200_000_000n,
   accruedYield: 34_250_000n, // 34.25 USDC

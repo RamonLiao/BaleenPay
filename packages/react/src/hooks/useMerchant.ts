@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useFloatSync } from './useFloatSync.js'
+import { useBaleenPay } from './useBaleenPay.js'
 import type { ObjectId, UseMerchantReturn } from '../types.js'
 
 /**
@@ -9,12 +9,12 @@ import type { ObjectId, UseMerchantReturn } from '../types.js'
  * Uses the merchantId from config by default.
  */
 export function useMerchant(merchantId?: ObjectId): UseMerchantReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const queryClient = useQueryClient()
   const id = merchantId ?? client.config.merchantId
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['floatsync', 'merchant', id],
+    queryKey: ['baleenpay', 'merchant', id],
     queryFn: () => client.getMerchant(id),
   })
 
@@ -23,7 +23,7 @@ export function useMerchant(merchantId?: ObjectId): UseMerchantReturn {
     isLoading,
     error: error as Error | null,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['floatsync', 'merchant', id] })
+      queryClient.invalidateQueries({ queryKey: ['baleenpay', 'merchant', id] })
     },
   }
 }

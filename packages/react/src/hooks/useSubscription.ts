@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
-import { useFloatSync } from './useFloatSync.js'
+import { useBaleenPay } from './useBaleenPay.js'
 import type {
   SubscribeParams,
   FundParams,
@@ -10,13 +10,13 @@ import type {
 } from '../types.js'
 
 /**
- * Hook for subscription operations via FloatSync.
+ * Hook for subscription operations via BaleenPay.
  *
  * Provides subscribe, cancel, fund, and process actions.
  * All share the same status/error/result state — only one action at a time.
  */
 export function useSubscription(): UseSubscriptionReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const dAppKit = useDAppKit()
   const account = useCurrentAccount()
 

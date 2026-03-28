@@ -110,9 +110,9 @@ export default function LandingPage() {
           </div>
           <div className="rounded-xl bg-ocean-midnight border border-ocean-ink/30 p-6 overflow-auto">
             <pre className="text-sm text-ocean-sky font-mono leading-relaxed whitespace-pre">
-{`import { FloatSync } from '@floatsync/sdk'
+{`import { BaleenPay } from '@baleenpay/sdk'
 
-const fs = new FloatSync({
+const fs = new BaleenPay({
   network: 'testnet',
   packageId: '0xe0eb...306b32a',
   merchantId: '0x4db0...c17c24',

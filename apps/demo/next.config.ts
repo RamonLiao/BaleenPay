@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 import { resolve } from 'path'
 
 const config: NextConfig = {
-  transpilePackages: ['@floatsync/sdk', '@floatsync/react'],
+  transpilePackages: ['@baleenpay/sdk', '@baleenpay/react'],
   webpack: (config) => {
     // Force single instance of dapp-kit-react so Provider context matches hooks
     // (pnpm resolves different copies for React 18 vs 19 peer deps)

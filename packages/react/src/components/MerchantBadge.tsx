@@ -21,24 +21,24 @@ export function MerchantBadge({
 
   if (isLoading) {
     return (
-      <div className={className} data-floatsync="merchant-badge" data-loading="true">
-        <span data-floatsync="loading">Loading...</span>
+      <div className={className} data-baleenpay="merchant-badge" data-loading="true">
+        <span data-baleenpay="loading">Loading...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className={className} data-floatsync="merchant-badge" data-error="true">
-        <span data-floatsync="error" role="alert">{error.message}</span>
+      <div className={className} data-baleenpay="merchant-badge" data-error="true">
+        <span data-baleenpay="error" role="alert">{error.message}</span>
       </div>
     )
   }
 
   if (!merchant) {
     return (
-      <div className={className} data-floatsync="merchant-badge" data-empty="true">
-        <span data-floatsync="empty">No merchant data</span>
+      <div className={className} data-baleenpay="merchant-badge" data-empty="true">
+        <span data-baleenpay="empty">No merchant data</span>
       </div>
     )
   }
@@ -46,13 +46,13 @@ export function MerchantBadge({
   return (
     <div
       className={className}
-      data-floatsync="merchant-badge"
+      data-baleenpay="merchant-badge"
       data-paused={merchant.pausedByAdmin || merchant.pausedBySelf || undefined}
     >
-      <span data-floatsync="brand">{merchant.brandName}</span>
-      <span data-floatsync="status">{merchant.pausedByAdmin || merchant.pausedBySelf ? 'Paused' : 'Active'}</span>
-      <span data-floatsync="total">{merchant.totalReceived.toString()}</span>
-      <span data-floatsync="subscriptions">{merchant.activeSubscriptions}</span>
+      <span data-baleenpay="brand">{merchant.brandName}</span>
+      <span data-baleenpay="status">{merchant.pausedByAdmin || merchant.pausedBySelf ? 'Paused' : 'Active'}</span>
+      <span data-baleenpay="total">{merchant.totalReceived.toString()}</span>
+      <span data-baleenpay="subscriptions">{merchant.activeSubscriptions}</span>
     </div>
   )
 }

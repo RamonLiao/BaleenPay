@@ -1,7 +1,7 @@
 // packages/sdk/src/admin.ts
 
 import { Transaction } from '@mysten/sui/transactions'
-import type { FloatSyncConfig, TransactionResult, ObjectId, KeeperParams } from './types.js'
+import type { BaleenPayConfig, TransactionResult, ObjectId, KeeperParams } from './types.js'
 import { ValidationError } from './errors.js'
 import {
   buildKeeperWithdraw,
@@ -18,9 +18,9 @@ import {
  * - setRouterMode: Change yield routing strategy (AdminCap-gated)
  */
 export class AdminClient {
-  readonly config: FloatSyncConfig
+  readonly config: BaleenPayConfig
 
-  constructor(config: FloatSyncConfig) {
+  constructor(config: BaleenPayConfig) {
     if (!config.packageId) throw new ValidationError('MISSING_PACKAGE_ID', 'packageId is required')
     if (!config.network) throw new ValidationError('MISSING_NETWORK', 'network is required')
     this.config = config

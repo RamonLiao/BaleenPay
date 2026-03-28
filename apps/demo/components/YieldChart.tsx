@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
-import type { YieldDataPoint } from '@floatsync/react'
+import type { YieldDataPoint } from '@baleenpay/react'
 
 type TimeRange = '7d' | '30d' | 'all'
 

@@ -1,5 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { FloatSyncConfig } from '../types.js'
+import type { BaleenPayConfig } from '../types.js'
 import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 
 /**
@@ -7,7 +7,7 @@ import { resolveCoin, coinTypeArg } from '../coins/registry.js'
  * Requires yieldVaultId in config and coinType.
  */
 export function buildClaimYield(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   merchantCapId: string,
   coinType: string,
 ): Transaction {

@@ -18,7 +18,7 @@ import {
   useDAppKitHook,
   useCurrentAccountHook,
 } from '@/lib/hooks'
-import type { MutationStatus } from '@floatsync/react'
+import type { MutationStatus } from '@baleenpay/react'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                   onClick={() =>
                     executeAdminTx(() => {
                       // In demo mode executeAdminTx never calls this
-                      const { buildSelfPause, buildSelfUnpause } = require('@floatsync/sdk')
+                      const { buildSelfPause, buildSelfUnpause } = require('@baleenpay/sdk')
                       const { DEMO_CONFIG } = require('@/lib/config')
                       return isPaused
                         ? buildSelfUnpause(DEMO_CONFIG, MERCHANT_CAP_ID)

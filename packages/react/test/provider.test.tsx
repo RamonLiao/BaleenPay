@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { render, screen } from '@testing-library/react'
-import { FloatSyncProvider, useFloatSync, FloatSyncContext } from '../src/index.js'
-import { FloatSync } from '@floatsync/sdk'
+import { BaleenPayProvider, useBaleenPay, BaleenPayContext } from '../src/index.js'
+import { BaleenPay } from '@baleenpay/sdk'
 import type { ReactNode } from 'react'
 
-// ── Mock SuiJsonRpcClient so FloatSync constructor works ──
+// ── Mock SuiJsonRpcClient so BaleenPay constructor works ──
 vi.mock('@mysten/sui/jsonRpc', () => {
   class MockSuiJsonRpcClient {
     url: string
@@ -27,41 +27,41 @@ const testConfig = {
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <FloatSyncProvider config={testConfig}>
+    <BaleenPayProvider config={testConfig}>
       {children}
-    </FloatSyncProvider>
+    </BaleenPayProvider>
   )
 }
 
 // ── Provider rendering ──
 
-describe('FloatSyncProvider', () => {
+describe('BaleenPayProvider', () => {
   it('renders children', () => {
     render(
-      <FloatSyncProvider config={testConfig}>
+      <BaleenPayProvider config={testConfig}>
         <div data-testid="child">hello</div>
-      </FloatSyncProvider>,
+      </BaleenPayProvider>,
     )
     expect(screen.getByTestId('child')).toBeDefined()
     expect(screen.getByTestId('child').textContent).toBe('hello')
   })
 
-  it('provides a FloatSync client via context', () => {
-    const { result } = renderHook(() => useFloatSync(), { wrapper })
-    expect(result.current).toBeInstanceOf(FloatSync)
+  it('provides a BaleenPay client via context', () => {
+    const { result } = renderHook(() => useBaleenPay(), { wrapper })
+    expect(result.current).toBeInstanceOf(BaleenPay)
   })
 
   it('client has correct config', () => {
-    const { result } = renderHook(() => useFloatSync(), { wrapper })
+    const { result } = renderHook(() => useBaleenPay(), { wrapper })
     expect(result.current.config.network).toBe('testnet')
     expect(result.current.config.packageId).toBe('0xpkg123')
     expect(result.current.config.merchantId).toBe('0xmerchant456')
   })
 
   it('returns stable client reference on re-render with same config', () => {
-    const refs: FloatSync[] = []
+    const refs: BaleenPay[] = []
     const { rerender } = renderHook(() => {
-      const client = useFloatSync()
+      const client = useBaleenPay()
       refs.push(client)
       return client
     }, { wrapper })
@@ -72,19 +72,19 @@ describe('FloatSyncProvider', () => {
   })
 
   it('creates new client when packageId changes', () => {
-    const refs: FloatSync[] = []
+    const refs: BaleenPay[] = []
     let cfg = { ...testConfig }
 
     function DynamicWrapper({ children }: { children: ReactNode }) {
       return (
-        <FloatSyncProvider config={cfg}>
+        <BaleenPayProvider config={cfg}>
           {children}
-        </FloatSyncProvider>
+        </BaleenPayProvider>
       )
     }
 
     const { rerender } = renderHook(() => {
-      const client = useFloatSync()
+      const client = useBaleenPay()
       refs.push(client)
       return client
     }, { wrapper: DynamicWrapper })
@@ -97,42 +97,42 @@ describe('FloatSyncProvider', () => {
     expect(refs[1].config.packageId).toBe('0xnewpkg')
   })
 
-  it('passes options to FloatSync client', () => {
+  it('passes options to BaleenPay client', () => {
     function WrapperWithOptions({ children }: { children: ReactNode }) {
       return (
-        <FloatSyncProvider config={testConfig} options={{ pendingTtlMs: 30000 }}>
+        <BaleenPayProvider config={testConfig} options={{ pendingTtlMs: 30000 }}>
           {children}
-        </FloatSyncProvider>
+        </BaleenPayProvider>
       )
     }
 
-    const { result } = renderHook(() => useFloatSync(), { wrapper: WrapperWithOptions })
+    const { result } = renderHook(() => useBaleenPay(), { wrapper: WrapperWithOptions })
     // Client was created successfully with options — no throw
-    expect(result.current).toBeInstanceOf(FloatSync)
+    expect(result.current).toBeInstanceOf(BaleenPay)
   })
 })
 
-// ── useFloatSync ──
+// ── useBaleenPay ──
 
-describe('useFloatSync', () => {
+describe('useBaleenPay', () => {
   it('throws when used outside provider', () => {
     // Suppress React error boundary console noise
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(() => {
-      renderHook(() => useFloatSync())
-    }).toThrow('useFloatSync must be used within a <FloatSyncProvider>')
+      renderHook(() => useBaleenPay())
+    }).toThrow('useBaleenPay must be used within a <BaleenPayProvider>')
 
     spy.mockRestore()
   })
 
-  it('error message mentions FloatSyncProvider', () => {
+  it('error message mentions BaleenPayProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     try {
-      renderHook(() => useFloatSync())
+      renderHook(() => useBaleenPay())
     } catch (e: any) {
-      expect(e.message).toContain('FloatSyncProvider')
+      expect(e.message).toContain('BaleenPayProvider')
     }
 
     spy.mockRestore()
@@ -148,9 +148,9 @@ describe('config validation', () => {
 
     expect(() => {
       render(
-        <FloatSyncProvider config={badConfig}>
+        <BaleenPayProvider config={badConfig}>
           <div />
-        </FloatSyncProvider>,
+        </BaleenPayProvider>,
       )
     }).toThrow()
 
@@ -163,9 +163,9 @@ describe('config validation', () => {
 
     expect(() => {
       render(
-        <FloatSyncProvider config={badConfig}>
+        <BaleenPayProvider config={badConfig}>
           <div />
-        </FloatSyncProvider>,
+        </BaleenPayProvider>,
       )
     }).toThrow()
 

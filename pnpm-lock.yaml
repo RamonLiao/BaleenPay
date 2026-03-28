@@ -10,10 +10,10 @@ importers:
 
   apps/demo:
     dependencies:
-      '@floatsync/react':
+      '@baleenpay/react':
         specifier: workspace:*
         version: link:../../packages/react
-      '@floatsync/sdk':
+      '@baleenpay/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@mysten/dapp-kit-core':
@@ -65,7 +65,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@floatsync/sdk':
+      '@baleenpay/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@mysten/dapp-kit-react':

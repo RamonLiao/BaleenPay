@@ -1,11 +1,11 @@
 /**
- * Demo-mode hooks: drop-in replacements for @floatsync/react hooks.
+ * Demo-mode hooks: drop-in replacements for @baleenpay/react hooks.
  * Use mock data + simulated tx flows. No wallet or chain needed.
  */
 'use client'
 
 import { useState, useCallback } from 'react'
-import type { MutationStatus } from '@floatsync/react'
+import type { MutationStatus } from '@baleenpay/react'
 import {
   MOCK_MERCHANT,
   MOCK_YIELD_INFO,

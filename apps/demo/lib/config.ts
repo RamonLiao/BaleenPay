@@ -1,6 +1,6 @@
-import type { FloatSyncConfig } from '@floatsync/sdk'
+import type { BaleenPayConfig } from '@baleenpay/sdk'
 
-export const DEMO_CONFIG: FloatSyncConfig = {
+export const DEMO_CONFIG: BaleenPayConfig = {
   network: 'testnet',
   packageId: '0xe0eb53cce531ab129e499b06ed1a858bb64da08e6c53c18ab4c85ef01306b32a',
   merchantId: '0x4db0ff62d5402f3970028995312a4fd0c243cef9ce6d1e4ace77667155c17c24',

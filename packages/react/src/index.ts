@@ -1,8 +1,8 @@
 // Provider
-export { FloatSyncProvider, FloatSyncContext } from './provider.js'
+export { BaleenPayProvider, BaleenPayContext } from './provider.js'
 
 // Hooks
-export { useFloatSync } from './hooks/useFloatSync.js'
+export { useBaleenPay } from './hooks/useBaleenPay.js'
 export { usePayment } from './hooks/usePayment.js'
 export { useSubscription } from './hooks/useSubscription.js'
 export { useMerchant } from './hooks/useMerchant.js'
@@ -19,9 +19,9 @@ export { MerchantBadge } from './components/MerchantBadge.js'
 
 // Types
 export type {
-  FloatSyncProviderProps,
-  FloatSyncConfig,
-  FloatSyncClientOptions,
+  BaleenPayProviderProps,
+  BaleenPayConfig,
+  BaleenPayClientOptions,
   MutationStatus,
   MutationState,
   UsePaymentReturn,

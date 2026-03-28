@@ -2,7 +2,7 @@ import { test, scrollTo } from './demo.fixture'
 
 test('05 — Developers: SDK Integration', async ({ page }) => {
   await page.goto('/developers')
-  await page.waitForSelector('h1:has-text("Integrate FloatSync")')
+  await page.waitForSelector('h1:has-text("Integrate BaleenPay")')
   await page.waitForTimeout(1000)
 
   // Scroll through each code snippet

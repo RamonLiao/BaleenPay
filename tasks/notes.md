@@ -1,18 +1,18 @@
-# FloatSync Notes
+# BaleenPay Notes
 
 ## 2026-03-25: Stripe-like SDK Architecture Decision
 
 ### 選定方案：C (Progressive Platform)
-- Phase 1: `@floatsync/sdk` + `@floatsync/react` + 合約 order_id 升級
-- Phase 2: `@floatsync/server` (webhook + server-side idempotency)
-- Phase 3: FloatSync Cloud (REST API + Hosted Checkout + metering)
+- Phase 1: `@baleenpay/sdk` + `@baleenpay/react` + 合約 order_id 升級
+- Phase 2: `@baleenpay/server` (webhook + server-side idempotency)
+- Phase 3: BaleenPay Cloud (REST API + Hosted Checkout + metering)
 
 ### 未來擴展：方案 B (Full Platform) 備忘
 當團隊和資金到位時，Phase 3 展開為完整平台：
 - REST API Gateway（/v1/payments, /v1/merchants...）
 - Webhook Service（indexer → HTTP POST）
 - API Key Management（pk_/sk_/whsec_ 三層）
-- Hosted Checkout Page（pay.floatsync.io）
+- Hosted Checkout Page（pay.baleenpay.io）
 - Dashboard API
 - Usage Metering + Billing
 - Protocol fee module（合約層抽成）
@@ -67,13 +67,13 @@
 - 實際 v2 API：`createDAppKit()` from `@mysten/dapp-kit-core` + `DAppKitProvider` from `@mysten/dapp-kit-react`
 - `ConnectButton` 移到 `@mysten/dapp-kit-react/ui` subpath export
 - `signAndExecuteTransaction` 回傳 `TransactionResultWithEffects`（有 `effects`, `transaction`, `bcs`），不是 v1 的 `{ Transaction, FailedTransaction }` wrapper
-- **已知問題**：`@floatsync/react` hooks（usePayment, useSubscription）內部 `txResult.FailedTransaction` / `txResult.Transaction.digest` 是 v1 pattern，需要更新以匹配 v2 DAppKit 結果格式。目前不阻擋 demo UI 開發，但影響實際交易流程。
+- **已知問題**：`@baleenpay/react` hooks（usePayment, useSubscription）內部 `txResult.FailedTransaction` / `txResult.Transaction.digest` 是 v1 pattern，需要更新以匹配 v2 DAppKit 結果格式。目前不阻擋 demo UI 開發，但影響實際交易流程。
 
 ### Provider Stack（最終版）
 ```
 QueryClientProvider
   └── DAppKitProvider (dAppKit instance)
-      └── FloatSyncProvider (config)
+      └── BaleenPayProvider (config)
           └── Nav + main + Footer
 ```
 
@@ -87,4 +87,4 @@ QueryClientProvider
 ### 進度
 - Task 1 (scaffold) + Task 2 (Nav/Footer/format) 完成
 - Task 3-8 待做（shared components → pages）
-- Plan：`docs/superpowers/plans/2026-03-26-floatsync-demo-app.md`
+- Plan：`docs/superpowers/plans/2026-03-26-baleenpay-demo-app.md`
