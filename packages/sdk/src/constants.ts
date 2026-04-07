@@ -3,15 +3,15 @@
 export const CLOCK_OBJECT_ID = '0x6'
 
 export const DEFAULT_GRPC_URLS: Record<string, string> = {
-  mainnet: 'https://sui-mainnet.mystenlabs.com',
-  testnet: 'https://sui-testnet.mystenlabs.com',
-  devnet: 'https://sui-devnet.mystenlabs.com',
+  mainnet: 'https://fullnode.mainnet.sui.io:443',
+  testnet: 'https://fullnode.testnet.sui.io:443',
+  devnet: 'https://fullnode.devnet.sui.io:443',
 }
 
 export const DEFAULT_GRAPHQL_URLS: Record<string, string> = {
-  mainnet: 'https://sui-mainnet.mystenlabs.com/graphql',
-  testnet: 'https://sui-testnet.mystenlabs.com/graphql',
-  devnet: 'https://sui-devnet.mystenlabs.com/graphql',
+  mainnet: 'https://graphql.mainnet.sui.io',
+  testnet: 'https://graphql.testnet.sui.io',
+  devnet: 'https://graphql.devnet.sui.io',
 }
 
 export const MAX_ORDER_ID_LENGTH = 64
