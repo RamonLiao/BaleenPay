@@ -65,6 +65,7 @@ export {
   buildSelfPause,
   buildSelfUnpause,
   buildClaimYield,
+  buildClaimYieldPartial,
   buildProcessSubscription,
   buildCancelSubscription,
   buildFundSubscription,

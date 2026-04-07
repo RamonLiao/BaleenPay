@@ -130,6 +130,16 @@ public(package) fun emit_router_mode_changed(old_mode: u8, new_mode: u8) {
     event::emit(RouterModeChanged { old_mode, new_mode });
 }
 
+public struct YieldClaimedPartial has copy, drop {
+    merchant_id: ID,
+    claimed: u64,
+    remaining: u64,
+}
+
+public(package) fun emit_yield_claimed_partial(merchant_id: ID, claimed: u64, remaining: u64) {
+    event::emit(YieldClaimedPartial { merchant_id, claimed, remaining });
+}
+
 // ── V2 events (SDK Phase 1) ──
 
 public struct PaymentReceivedV2 has copy, drop {

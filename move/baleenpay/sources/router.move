@@ -24,6 +24,8 @@ const EOverflow: u64 = 23;
 const ENotMerchantOwner: u64 = 26;
 #[error]
 const EPaused: u64 = 27;
+#[error]
+const EInsufficientVaultBalance: u64 = 30;
 
 /// Shared config object controlling payment routing strategy.
 /// AdminCap is the sole gatekeeper for all privileged operations (including keeper ops).
@@ -223,18 +225,31 @@ public fun merchant_withdraw<T>(
     events::emit_merchant_withdrawn(object::id(account), object::id(vault), amount);
 }
 
-/// Claim yield v2 — withdraws actual coins from YieldVault and transfers to merchant.
-/// Moved here (instead of merchant.move) to avoid circular dependency.
+/// Claim a specific amount of accrued yield from YieldVault.
+public fun claim_yield_partial<T>(
+    cap: &merchant::MerchantCap,
+    account: &mut MerchantAccount,
+    yield_vault: &mut YieldVault<T>,
+    amount: u64,
+    ctx: &mut TxContext,
+) {
+    assert!(yield_vault.balance.value() >= amount, EInsufficientVaultBalance);
+    let claimed = merchant::debit_accrued_yield_typed<T>(cap, account, amount);
+    let remaining = merchant::get_accrued_yield_typed<T>(account);
+    let coin = yield_vault.balance.split(claimed).into_coin(ctx);
+    transfer::public_transfer(coin, merchant::get_owner(account));
+    events::emit_yield_claimed_partial(object::id(account), claimed, remaining);
+}
+
+/// Claim yield v2 — claims all accrued yield. Wrapper around claim_yield_partial.
 public fun claim_yield_v2<T>(
     cap: &merchant::MerchantCap,
     account: &mut MerchantAccount,
     yield_vault: &mut YieldVault<T>,
     ctx: &mut TxContext,
 ) {
-    let amount = merchant::reset_accrued_yield_typed<T>(cap, account);
-    let coin = yield_vault.balance.split(amount).into_coin(ctx);
-    transfer::public_transfer(coin, merchant::get_owner(account));
-    events::emit_yield_claimed(object::id(account), amount);
+    let amount = merchant::get_accrued_yield_typed<T>(account);
+    claim_yield_partial<T>(cap, account, yield_vault, amount, ctx);
 }
 
 // ── Getters ──

@@ -73,6 +73,27 @@ describe('BaleenPay client', () => {
       expect(result.tx).toBeDefined()
     })
 
+    it('claimYieldPartial returns tx', () => {
+      const c = new BaleenPay({ ...baseConfig, yieldVaultId: '0xYV' })
+      const result = c.claimYieldPartial('0xcap', 'USDC', 100n)
+      expect(result.tx).toBeDefined()
+    })
+
+    it('claimYieldPartial throws on zero amount', () => {
+      const c = new BaleenPay({ ...baseConfig, yieldVaultId: '0xYV' })
+      expect(() => c.claimYieldPartial('0xcap', 'USDC', 0n)).toThrow('amount must be > 0')
+    })
+
+    it('claimYieldPartial throws on negative amount', () => {
+      const c = new BaleenPay({ ...baseConfig, yieldVaultId: '0xYV' })
+      expect(() => c.claimYieldPartial('0xcap', 'USDC', -1n)).toThrow('amount must be > 0')
+    })
+
+    it('claimYieldPartial throws without yieldVaultId', () => {
+      const c = new BaleenPay(baseConfig)
+      expect(() => c.claimYieldPartial('0xcap', 'USDC', 100n)).toThrow('yieldVaultId is required')
+    })
+
     it('selfPause returns tx', () => {
       const result = client.selfPause('0xcap')
       expect(result.tx).toBeDefined()

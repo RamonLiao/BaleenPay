@@ -24,6 +24,10 @@ const EAdminFrozen: u64 = 24;         // admin-paused, self_unpause blocked
 const EOverflow: u64 = 23;            // arithmetic overflow guard
 #[error]
 const EAlreadyMigrated: u64 = 28;    // admin_migrate_yield already called for this type
+#[error]
+const EExceedsAccrued: u64 = 29;     // amount > accrued yield for this type
+#[error]
+const EZeroAmount: u64 = 10;         // amount must be > 0
 
 // ── Structs ──
 
@@ -314,6 +318,30 @@ public(package) fun reset_accrued_yield_typed<T>(
     amount
 }
 
+/// Debit a specific amount from typed accrued yield. Returns the debited amount.
+/// Removes the df entirely if remaining is zero (no zombie dynamic fields).
+/// Uses immutable borrow first to avoid borrow checker conflict between borrow_mut and remove.
+public(package) fun debit_accrued_yield_typed<T>(
+    cap: &MerchantCap,
+    account: &mut MerchantAccount,
+    amount: u64,
+): u64 {
+    assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
+    assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+    assert!(amount > 0, EZeroAmount);
+    let key = AccruedYieldKey<T> {};
+    assert!(dynamic_field::exists_(&account.id, key), EZeroYield);
+    let current_val = *dynamic_field::borrow<AccruedYieldKey<T>, u64>(&account.id, key);
+    assert!(amount <= current_val, EExceedsAccrued);
+    if (amount == current_val) {
+        dynamic_field::remove<AccruedYieldKey<T>, u64>(&mut account.id, key);
+    } else {
+        let current = dynamic_field::borrow_mut<AccruedYieldKey<T>, u64>(&mut account.id, key);
+        *current = current_val - amount;
+    };
+    amount
+}
+
 #[test_only]
 /// Simulate yield accrual for testing claim_yield.
 public fun credit_yield_for_testing(account: &mut MerchantAccount, amount: u64) {
@@ -378,4 +406,11 @@ public fun return_from_farming_for_testing(account: &mut MerchantAccount, amount
 #[test_only]
 public fun credit_external_yield_typed_for_testing<T>(account: &mut MerchantAccount, amount: u64) {
     credit_external_yield_typed<T>(account, amount);
+}
+
+#[test_only]
+public fun debit_accrued_yield_typed_for_testing<T>(
+    cap: &MerchantCap, account: &mut MerchantAccount, amount: u64,
+): u64 {
+    debit_accrued_yield_typed<T>(cap, account, amount)
 }

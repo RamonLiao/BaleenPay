@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { Transaction } from '@mysten/sui/transactions'
 import { buildPayOnceRouted } from '../src/transactions/pay.js'
-import { buildClaimYield } from '../src/transactions/yield.js'
+import { buildClaimYield, buildClaimYieldPartial } from '../src/transactions/yield.js'
 import type { BaleenPayConfig, PayParams } from '../src/types.js'
 
 const config: BaleenPayConfig = {
@@ -53,5 +53,29 @@ describe('buildClaimYield (revised)', () => {
     const noYvConfig = { ...config, yieldVaultId: undefined }
     expect(() => buildClaimYield(noYvConfig, '0xCAP', 'USDB'))
       .toThrow('yieldVaultId is required')
+  })
+})
+
+describe('buildClaimYieldPartial', () => {
+  it('builds claim_yield_partial PTB with amount', () => {
+    const tx = buildClaimYieldPartial(config, '0xMERCHANT_CAP', 'USDB', 500n)
+    expect(tx).toBeInstanceOf(Transaction)
+    expect(tx.getData).toBeDefined()
+  })
+
+  it('throws without yieldVaultId', () => {
+    const noYvConfig = { ...config, yieldVaultId: undefined }
+    expect(() => buildClaimYieldPartial(noYvConfig, '0xCAP', 'USDB', 100n))
+      .toThrow('yieldVaultId is required')
+  })
+
+  it('throws on zero amount', () => {
+    expect(() => buildClaimYieldPartial(config, '0xCAP', 'USDB', 0n))
+      .toThrow('amount must be > 0')
+  })
+
+  it('throws on negative amount', () => {
+    expect(() => buildClaimYieldPartial(config, '0xCAP', 'USDB', -1n))
+      .toThrow('amount must be > 0')
   })
 })

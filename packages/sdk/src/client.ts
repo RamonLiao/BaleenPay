@@ -30,7 +30,7 @@ import { buildPayOnceV2, buildPayOnce, buildPayOnceRouted } from './transactions
 import type { YieldInfo } from './types.js'
 import { buildSubscribeV2, buildSubscribe } from './transactions/subscribe.js'
 import { buildRegisterMerchant, buildSelfPause, buildSelfUnpause } from './transactions/merchant.js'
-import { buildClaimYield } from './transactions/yield.js'
+import { buildClaimYield, buildClaimYieldPartial } from './transactions/yield.js'
 import {
   buildProcessSubscription,
   buildCancelSubscription,
@@ -157,6 +157,11 @@ export class BaleenPay {
   /** Build a claim_yield_v2 transaction (router module). Requires MerchantCap + coinType. */
   claimYield(merchantCapId: string, coinType: string): TransactionResult {
     return { tx: buildClaimYield(this.config, merchantCapId, coinType) }
+  }
+
+  /** Build a claim_yield_partial transaction. Amount in MIST. */
+  claimYieldPartial(merchantCapId: string, coinType: string, amount: bigint): TransactionResult {
+    return { tx: buildClaimYieldPartial(this.config, merchantCapId, coinType, amount) }
   }
 
   /**
