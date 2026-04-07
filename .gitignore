@@ -13,5 +13,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Env
+.env*
+!.env.example
+
 # Claude
 .claude/settings.local.json
