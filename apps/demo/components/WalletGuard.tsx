@@ -3,11 +3,8 @@
 import { useCurrentAccount } from '@mysten/dapp-kit-react'
 import { ConnectButton } from '@mysten/dapp-kit-react/ui'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
 export function WalletGuard({ children }: { children: React.ReactNode }) {
-  // In demo mode, skip wallet check entirely
-  const account = DEMO_MODE ? { address: 'demo' } : useCurrentAccount()
+  const account = useCurrentAccount()
 
   if (!account) {
     return (

@@ -2,15 +2,14 @@
 
 ## 本次工作重點 (Latest Update)
 - **做了什麼**:
-  - 歷經多次命名迭代，最終敲定專案名稱為 **BaleenPay**。
-  - 將專案目錄由 `BaleenPay` 重新命名為 `BaleenPay`。
-  - 更新了 `README.md`，加入了 Baleen (鯨鬚) 攔截水流中浮游生物 (截流 Yield) 的核心品牌隱喻。
+  - 將專案原有的繁體中文 `README.md` 重新命名為 `README_zh.md`。
+  - 根據需求，翻譯並生成了一份全新的英式英文版本 `README.md`，使專案的說明文件更佳國際化且符合英式英文字詞慣例。
 - **更動了哪些檔案**:
-  - 目錄名稱變更
-  - `README.md` (標題與簡介更新)
-  - `plan.md` (重建此記錄檔)
+  - `README.md` (NEW / Trnaslated to British English)
+  - `README_zh.md` (Renamed from original README.md)
+  - `plan.md` (Update)
 - **決策原因**:
-  - **Baleen (鯨鬚)** 是絕佳的高級生物學隱喻，安靜且高效地過濾出龐大水流 (Payment Float) 中的高營養價值物 (Yield)。加上 Pay 後綴，在 B2B SaaS 領域定位清晰。最重要的是，`baleenpay.com` 網域與 GitHub 組織皆無人使用，非常適合 Hackathon 快速部署與日後商用。
+  - 為擴大專案受眾，並建立專業專案的雙語說明文件基礎。
 - **尚未完成的 TODO**:
   - 初始化前端結構（例如 Next.js + shadcn/ui）作為 Demo Widget。
   - 規劃前端與 Move 智能合約（整合 StableLayer）的對接設計。

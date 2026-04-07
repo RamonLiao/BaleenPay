@@ -88,3 +88,43 @@ QueryClientProvider
 - Task 1 (scaffold) + Task 2 (Nav/Footer/format) 完成
 - Task 3-8 待做（shared components → pages）
 - Plan：`docs/superpowers/plans/2026-03-26-baleenpay-demo-app.md`
+
+## 2026-04-07: Merchant Redeem 設計決策
+
+### farming_principal 儲存方式
+
+| 方案 | 做法 | 適用場景 |
+|------|------|----------|
+| **B (已選)** | Dynamic field on MerchantAccount，key = `FarmingPrincipalKey` | Testnet 迭代，不需 migration |
+| **A (備用)** | 直接加 `farming_principal: u64` 到 MerchantAccount struct | Mainnet 正式部署，需 package upgrade + migration |
+
+### Option A 實作備忘（Mainnet 用）
+
+Package upgrade 後需呼叫 migration function：
+
+```move
+public fun migrate_merchant_v2(
+    _admin: &AdminCap,
+    account: &mut MerchantAccount,
+) {
+    // 1. 在新 struct 定義中加入 farming_principal: u64
+    // 2. 初始值 = 0（或從 dynamic field 讀取後刪除）
+    // 3. Admin 對每個 existing MerchantAccount 呼叫一次
+}
+```
+
+注意事項：
+- SUI compatible upgrade 允許新增欄位到 struct 尾部
+- SDK 需要版本適配，處理 v1（無 farming_principal）和 v2 account
+- Migration 期間可能需要暫停 keeper 操作，避免 accounting race
+
+**決策理由**：testnet 階段頻繁迭代，dynamic field 免 migration 成本低；mainnet 追求效能和簡潔，struct field 直接存取更高效（少一次 dynamic field lookup）。
+
+### StableLayer 協議發現
+
+- **Farm 是 StableLayer 團隊的合約**（同 deployer `0x0750...`），不是 BaleenPay 的
+- Testnet Farm 是 mock 版（`MockFarmEntity`），只有 receive/claim/pay，無 withdraw
+- `farm::receive` 只消化 Loan hot-potato，**不吃 Coin<Stablecoin>** — Stablecoin 留在呼叫者手上
+- Burn flow：`request_burn → farm::pay(&mut Request) → fulfill_burn → Coin<USDC>`
+- StableLayer 尚未部署 mainnet（deployer 在 mainnet 無交易記錄）
+- 完整 spec：`docs/superpowers/specs/2026-04-07-merchant-redeem-design.md`

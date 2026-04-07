@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module baleenpay::brand_usd {
     use sui::coin;
 

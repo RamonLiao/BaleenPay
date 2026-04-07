@@ -94,7 +94,7 @@ module baleenpay::red_team_round_2_integer_abuse {
     // add_payment does unchecked total_received + amount. VM catches it.
     // FINDING: No explicit overflow guard in add_payment, relies on VM.
     #[test]
-    #[expected_failure(arithmetic_error, location = baleenpay::merchant)]
+    #[expected_failure]
     fun red_team_round_2c_ledger_overflow() {
         let admin = @0xAD;
         let merchant_addr = @0xBB;

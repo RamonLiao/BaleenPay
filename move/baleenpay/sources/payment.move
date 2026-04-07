@@ -138,7 +138,7 @@ module baleenpay::payment {
         transfer::public_transfer(coin, merchant::get_owner(account));
 
         let now = clock.timestamp_ms();
-        let coin_type = type_name::get<T>().into_string().to_string();
+        let coin_type = type_name::with_defining_ids<T>().into_string().to_string();
         df::add(merchant::uid_mut(account), key, OrderRecord {
             amount,
             timestamp_ms: now,
@@ -176,7 +176,7 @@ module baleenpay::payment {
         assert!(amount > 0, EZeroAmount);
 
         let now = clock.timestamp_ms();
-        let coin_type = type_name::get<T>().into_string().to_string();
+        let coin_type = type_name::with_defining_ids<T>().into_string().to_string();
 
         // Record order for dedup
         df::add(merchant::uid_mut(account), key, OrderRecord {
@@ -320,7 +320,7 @@ module baleenpay::payment {
         let now = clock.timestamp_ms();
         let merchant_id = object::id(account);
 
-        let coin_type = type_name::get<T>().into_string().to_string();
+        let coin_type = type_name::with_defining_ids<T>().into_string().to_string();
         df::add(merchant::uid_mut(account), key, OrderRecord {
             amount: total_required,
             timestamp_ms: now,

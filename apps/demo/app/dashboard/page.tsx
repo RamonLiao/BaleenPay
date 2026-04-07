@@ -20,8 +20,6 @@ import {
 } from '@/lib/hooks'
 import type { MutationStatus } from '@baleenpay/react'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
 export default function DashboardPage() {
   const account = useCurrentAccountHook()
   const dAppKit = useDAppKitHook()
@@ -49,18 +47,11 @@ export default function DashboardPage() {
       resetAction()
       setActionStatus('signing')
 
-      if (DEMO_MODE) {
-        // Simulate tx in demo mode
-        await new Promise((r) => setTimeout(r, 1000))
-        setActionDigest('0xmock_admin_digest')
-        setActionStatus('success')
-        return
-      }
-
       const tx = buildFn()
       const result = await dAppKit.signAndExecuteTransaction({ transaction: tx })
       if (result.FailedTransaction) {
-        throw new Error(result.FailedTransaction.status.error?.message ?? 'Transaction failed')
+        const err = result.FailedTransaction.status.error
+        throw new Error(err ? (typeof err === 'string' ? err : err.message ?? 'Transaction failed') : 'Transaction failed')
       }
       setActionDigest(result.Transaction.digest)
       setActionStatus('success')
@@ -108,7 +99,7 @@ export default function DashboardPage() {
               <StatCard
                 label="Total Received"
                 value={formatAmount(merchant.totalReceived)}
-                sub="MIST"
+                sub="USDC"
               />
               <StatCard
                 label="Idle Principal"
@@ -117,8 +108,8 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="Accrued Yield"
-                value={formatAmount(merchant.accruedYield)}
-                sub="Claimable"
+                value={yieldInfoLoading ? '...' : formatAmount(yieldInfo?.accruedYield ?? 0n)}
+                sub="Claimable USDB"
               />
               <StatCard
                 label="Active Subscriptions"
@@ -160,14 +151,14 @@ export default function DashboardPage() {
                   <div>
                     <h4 className="text-sm font-semibold text-ocean-deep mb-2">Claim Yield</h4>
                     <p className="text-sm text-ocean-ink mb-4">
-                      Accrued: {formatAmount(yieldInfo?.accruedYield ?? merchant.accruedYield)} MIST
+                      Accrued: {formatAmount(yieldInfo?.accruedYield ?? 0n)} USDB
                     </p>
                   </div>
                   <div>
                     <button
                       onClick={() => claimYield(MERCHANT_CAP_ID)}
                       disabled={
-                        (yieldInfo?.accruedYield ?? merchant.accruedYield) === 0n ||
+                        (yieldInfo?.accruedYield ?? 0n) === 0n ||
                         (claimStatus !== 'idle' && claimStatus !== 'error' && claimStatus !== 'rejected' && claimStatus !== 'success')
                       }
                       className="rounded-xl bg-gradient-to-r from-ocean-water to-ocean-teal px-6 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"

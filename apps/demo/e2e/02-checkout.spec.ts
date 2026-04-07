@@ -1,4 +1,4 @@
-import { test } from './demo.fixture'
+import { test, walletPause } from './demo.fixture'
 
 test('02 — Checkout: One-Time Payment', async ({ page }) => {
   await page.goto('/checkout')
@@ -9,18 +9,24 @@ test('02 — Checkout: One-Time Payment', async ({ page }) => {
   await page.locator('button', { hasText: 'Pro' }).click()
   await page.waitForTimeout(500)
 
-  // Checkout card visible (no wallet guard in demo mode)
-  await page.waitForSelector('h2:has-text("Order Summary")')
+  // WalletGuard: connect wallet
+  await walletPause(page, 'Connect wallet (Sui Wallet)')
+
+  // After wallet connected, checkout card should be visible
+  await page.waitForSelector('h2:has-text("Order Summary")', { timeout: 10_000 })
   await page.waitForTimeout(500)
 
   // Ensure USDC is selected
   await page.locator('button:has-text("USDC")').click()
   await page.waitForTimeout(300)
 
-  // Click Pay
+  // Click Pay — triggers real tx
   await page.locator('button:has-text("Pay $49")').click()
 
-  // Wait for simulated tx: building → signing → confirming → success
-  await page.waitForSelector('text=success', { timeout: 10_000 })
+  // Wallet will prompt for signing
+  await walletPause(page, 'Approve transaction in wallet')
+
+  // Wait for on-chain confirmation
+  await page.waitForSelector('text=success', { timeout: 30_000 })
   await page.waitForTimeout(2000)
 })

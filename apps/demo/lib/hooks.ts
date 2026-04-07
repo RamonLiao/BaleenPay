@@ -1,18 +1,18 @@
 /**
- * Hook barrel for demo mode.
- * When NEXT_PUBLIC_DEMO_MODE=true, exports mock hooks (no wallet/chain needed).
- * To use real hooks, remove .env.local and import directly from @baleenpay/react.
+ * Hook barrel.
+ * When NEXT_PUBLIC_DEMO_MODE=true → swap this to re-export from './demo-hooks'.
+ * When NEXT_PUBLIC_DEMO_MODE=false (default) → real chain hooks.
  */
 'use client'
 
 export {
-  useMockPayment as usePaymentHook,
-  useMockSubscription as useSubscriptionHook,
-  useMockMerchant as useMerchantHook,
-  useMockPaymentHistory as usePaymentHistoryHook,
-  useMockYieldInfo as useYieldInfoHook,
-  useMockYieldHistory as useYieldHistoryHook,
-  useMockClaimYield as useClaimYieldHook,
-  useMockCurrentAccount as useCurrentAccountHook,
-  useMockDAppKit as useDAppKitHook,
-} from './demo-hooks'
+  usePaymentHook,
+  useSubscriptionHook,
+  useMerchantHook,
+  usePaymentHistoryHook,
+  useYieldInfoHook,
+  useYieldHistoryHook,
+  useClaimYieldHook,
+  useCurrentAccountHook,
+  useDAppKitHook,
+} from './real-hooks'
