@@ -11,7 +11,7 @@ import {
   mockDefaultCoins,
   makeGraphQLEventsResponse,
 } from './_mocks.js'
-import { FloatSync } from '../src/client.js'
+import { BaleenPay } from '../src/client.js'
 import { AdminClient } from '../src/admin.js'
 import { IdempotencyGuard } from '../src/idempotency.js'
 import { ValidationError } from '../src/errors.js'
@@ -53,11 +53,11 @@ beforeEach(() => {
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: Full merchant lifecycle (V2)', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
     setupV2Mocks()
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('register → pay → idempotency block → subscribe → query merchant → events', async () => {
@@ -149,11 +149,11 @@ describe('Integration: Full merchant lifecycle (V2)', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: V1 fallback path', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
     setupV1Mocks()
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('pay routes to pay_once (v1) when v2 not available', async () => {
@@ -196,11 +196,11 @@ describe('Integration: V1 fallback path', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: Coin helper with USDC', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
     setupV2Mocks()
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('pay with USDC fetches coins and builds PTB', async () => {
@@ -253,11 +253,11 @@ describe('Integration: Coin helper with USDC', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: Subscription operations', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
     setupV2Mocks()
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('subscribe → process → fund → cancel', async () => {
@@ -330,7 +330,7 @@ describe('Integration: Event stream (polling)', () => {
     // Seed query returns empty (no prior events)
     mockGraphQLQuery.mockResolvedValue(makeGraphQLEventsResponse([]))
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
     await client.startEventStream()
 
     // Seed call should have been made with first: 1
@@ -347,7 +347,7 @@ describe('Integration: Event stream (polling)', () => {
     // Seed: no prior events
     mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
     const events: unknown[] = []
     client.on('payment.received', (e) => events.push(e))
 
@@ -384,7 +384,7 @@ describe('Integration: Event stream (polling)', () => {
   it('wildcard listener receives all event types', async () => {
     mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
     const events: unknown[] = []
     client.on('*', (e) => events.push(e))
 
@@ -413,7 +413,7 @@ describe('Integration: Event stream (polling)', () => {
   it('filtered listener only receives matching events', async () => {
     mockGraphQLQuery.mockResolvedValueOnce(makeGraphQLEventsResponse([]))
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
     const events: unknown[] = []
     client.on('payment.received', (e) => events.push(e), { payer: SENDER })
 
@@ -445,10 +445,10 @@ describe('Integration: Event stream (polling)', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('Integration: Payment history', () => {
-  let client: FloatSync
+  let client: BaleenPay
 
   beforeEach(() => {
-    client = new FloatSync(baseConfig)
+    client = new BaleenPay(baseConfig)
   })
 
   it('fetches page 1, then page 2 with cursor', async () => {
@@ -526,7 +526,7 @@ describe('Integration: AdminClient', () => {
 
 describe('Integration: Self-pause / unpause', () => {
   it('selfPause and selfUnpause build valid PTBs', () => {
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
 
     const pause = client.selfPause('0xcap')
     expect(pause.tx).toBeDefined()
@@ -545,7 +545,7 @@ describe('Integration: Idempotency error cleanup', () => {
     setupV2Mocks()
     mockListCoins.mockResolvedValue({ objects: [] }) // no USDC coins
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
 
     await expect(
       client.pay({ amount: 1_000_000n, coin: 'USDC', orderId: 'idem-err-001' }, SENDER),
@@ -569,7 +569,7 @@ describe('Integration: Idempotency error cleanup', () => {
     setupV2Mocks()
     mockListCoins.mockResolvedValue({ objects: [] }) // no USDC coins
 
-    const client = new FloatSync(baseConfig)
+    const client = new BaleenPay(baseConfig)
 
     await expect(
       client.subscribe(

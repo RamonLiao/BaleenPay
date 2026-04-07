@@ -8,7 +8,7 @@ export default function DevelopersPage() {
         Developer Guide
       </p>
       <h1 className="text-3xl font-bold text-ocean-deep mb-4">
-        Integrate FloatSync in minutes
+        Integrate BaleenPay in minutes
       </h1>
       <p className="text-ocean-ink mb-12 max-w-xl">
         TypeScript SDK with React hooks and drop-in components.

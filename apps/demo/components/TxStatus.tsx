@@ -1,4 +1,4 @@
-import type { MutationStatus } from '@floatsync/react'
+import type { MutationStatus } from '@baleenpay/react'
 import { SUISCAN_URL } from '@/lib/config'
 
 interface TxStatusProps {

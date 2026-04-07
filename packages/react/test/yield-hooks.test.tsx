@@ -95,7 +95,7 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 
 import {
-  FloatSyncProvider,
+  BaleenPayProvider,
   useYieldInfo,
   useYieldHistory,
   useClaimYield,
@@ -110,9 +110,9 @@ const testConfig = {
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <FloatSyncProvider config={testConfig}>
+    <BaleenPayProvider config={testConfig}>
       {children}
-    </FloatSyncProvider>
+    </BaleenPayProvider>
   )
 }
 
@@ -175,7 +175,7 @@ describe('useYieldInfo', () => {
     result.current.refetch()
     expect(mockRefetchFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['floatsync', 'yield-info', '0xmerchant456'],
+        queryKey: ['baleenpay', 'yield-info', '0xmerchant456'],
       }),
     )
   })

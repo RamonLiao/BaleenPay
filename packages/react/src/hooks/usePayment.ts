@@ -1,16 +1,16 @@
 import { useState, useCallback } from 'react'
 import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
-import { useFloatSync } from './useFloatSync.js'
+import { useBaleenPay } from './useBaleenPay.js'
 import type { PayParams, UsePaymentReturn, MutationStatus } from '../types.js'
 
 /**
- * Hook for one-time payments via FloatSync.
+ * Hook for one-time payments via BaleenPay.
  *
  * State machine: idle → building → signing → confirming → success
  * Error/rejected branches auto-reset is caller's responsibility via reset().
  */
 export function usePayment(): UsePaymentReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const dAppKit = useDAppKit()
   const account = useCurrentAccount()
 

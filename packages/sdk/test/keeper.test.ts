@@ -6,9 +6,9 @@ import {
   buildKeeperDeposit,
   buildKeeperHarvest,
 } from '../src/transactions/keeper.js'
-import type { FloatSyncConfig, KeeperParams } from '../src/types.js'
+import type { BaleenPayConfig, KeeperParams } from '../src/types.js'
 
-const config: FloatSyncConfig = {
+const config: BaleenPayConfig = {
   network: 'testnet',
   packageId: '0x1234',
   merchantId: '0xabcd',
@@ -21,6 +21,7 @@ const keeperParams: KeeperParams = {
   adminCapId: '0xadmin',
   vaultId: '0x7777',
   yieldVaultId: '0x8888',
+  stablecoinVaultId: '0x6666',
 }
 
 describe('buildKeeperWithdraw', () => {

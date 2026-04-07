@@ -117,7 +117,7 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }))
 
-import { FloatSyncProvider, usePayment, useSubscription, useMerchant, usePaymentHistory } from '../src/index.js'
+import { BaleenPayProvider, usePayment, useSubscription, useMerchant, usePaymentHistory } from '../src/index.js'
 
 const testConfig = {
   network: 'testnet' as const,
@@ -127,9 +127,9 @@ const testConfig = {
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <FloatSyncProvider config={testConfig}>
+    <BaleenPayProvider config={testConfig}>
       {children}
-    </FloatSyncProvider>
+    </BaleenPayProvider>
   )
 }
 
@@ -425,7 +425,7 @@ describe('useMerchant', () => {
     result.current.refetch()
     expect(mockRefetchFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['floatsync', 'merchant', '0xmerchant456'],
+        queryKey: ['baleenpay', 'merchant', '0xmerchant456'],
       }),
     )
   })

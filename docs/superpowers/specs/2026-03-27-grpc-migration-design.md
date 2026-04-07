@@ -1,4 +1,4 @@
-# FloatSync SDK: JSON-RPC → gRPC Migration
+# BaleenPay SDK: JSON-RPC → gRPC Migration
 
 **Date**: 2026-03-27
 **Status**: Approved
@@ -21,7 +21,7 @@
 ## Architecture
 
 ```
-FloatSync (client.ts)
+BaleenPay (client.ts)
 ├── SuiGrpcClient (@mysten/sui/grpc)
 │   ├── getObject()      — merchant/subscription queries
 │   ├── listCoins()      — coin preparation for PTBs
@@ -35,11 +35,11 @@ FloatSync (client.ts)
 
 ## API Changes
 
-### FloatSyncConfig
+### BaleenPayConfig
 
 ```ts
 // Before
-interface FloatSyncConfig {
+interface BaleenPayConfig {
   packageId: string
   merchantId: string
   network: 'mainnet' | 'testnet' | 'devnet'
@@ -47,7 +47,7 @@ interface FloatSyncConfig {
 }
 
 // After
-interface FloatSyncConfig {
+interface BaleenPayConfig {
   packageId: string
   merchantId: string
   network: 'mainnet' | 'testnet' | 'devnet'
@@ -56,10 +56,10 @@ interface FloatSyncConfig {
 }
 ```
 
-### FloatSync class
+### BaleenPay class
 
 ```ts
-class FloatSync {
+class BaleenPay {
   // Before
   readonly suiClient: SuiJsonRpcClient  // ← public, JSON-RPC
 
@@ -238,7 +238,7 @@ export const DEFAULT_GRAPHQL_URLS: Record<string, string> = {
 
 ### 7. `types.ts` — Config Type
 
-Update `FloatSyncConfig` interface: remove `rpcUrl`, add `grpcUrl` + `graphqlUrl`.
+Update `BaleenPayConfig` interface: remove `rpcUrl`, add `grpcUrl` + `graphqlUrl`.
 
 ### 8. Tests — Mock Updates
 
@@ -253,9 +253,9 @@ Affected files:
 
 ### 9. React Package
 
-`packages/react/src/provider.tsx` — no direct changes needed. The `FloatSync` constructor internally creates the clients. Provider just passes `FloatSyncConfig` through.
+`packages/react/src/provider.tsx` — no direct changes needed. The `BaleenPay` constructor internally creates the clients. Provider just passes `BaleenPayConfig` through.
 
-Config type change (`rpcUrl` → `grpcUrl`/`graphqlUrl`) propagates through `FloatSyncProviderProps`.
+Config type change (`rpcUrl` → `grpcUrl`/`graphqlUrl`) propagates through `BaleenPayProviderProps`.
 
 ### 10. Demo App
 

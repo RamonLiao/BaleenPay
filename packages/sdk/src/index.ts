@@ -1,7 +1,7 @@
 // packages/sdk/src/index.ts
 
 export type {
-  FloatSyncConfig,
+  BaleenPayConfig,
   PayParams,
   SubscribeParams,
   FundParams,
@@ -9,8 +9,8 @@ export type {
   QueryParams,
   TransactionResult,
   ExecutedResult,
-  FloatSyncEventName,
-  FloatSyncEventData,
+  BaleenPayEventName,
+  BaleenPayEventData,
   EventCallback,
   Unsubscribe,
   MerchantInfo,
@@ -30,7 +30,7 @@ export { prepareCoin } from './coins/index.js'
 export { validateCoinType } from './coins/index.js'
 
 // Errors
-export { FloatSyncError, PaymentError, MerchantError, ValidationError, NetworkError, parseAbortCode } from './errors.js'
+export { BaleenPayError, PaymentError, MerchantError, ValidationError, NetworkError, parseAbortCode } from './errors.js'
 
 // Events
 export { EventStream, EVENT_TYPE_MAP, normalizeEvent } from './events/index.js'
@@ -44,8 +44,8 @@ export { IdempotencyGuard } from './idempotency.js'
 export type { IdempotencyStatus } from './idempotency.js'
 
 // Client
-export { FloatSync } from './client.js'
-export type { FloatSyncClientOptions } from './client.js'
+export { BaleenPay } from './client.js'
+export type { BaleenPayClientOptions } from './client.js'
 
 // Admin
 export { AdminClient } from './admin.js'

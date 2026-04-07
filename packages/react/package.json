@@ -1,5 +1,5 @@
 {
-  "name": "@floatsync/react",
+  "name": "@baleenpay/react",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@floatsync/sdk": "workspace:*",
+    "@baleenpay/sdk": "workspace:*",
     "@mysten/dapp-kit-react": "^2.0.0",
     "@mysten/sui": "^2.8.0"
   },

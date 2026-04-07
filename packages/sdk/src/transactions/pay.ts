@@ -1,6 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
-import type { FloatSyncConfig, PayParams } from '../types.js'
+import type { BaleenPayConfig, PayParams } from '../types.js'
 import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 import { prepareCoin } from '../coins/helper.js'
 import { CLOCK_OBJECT_ID, ORDER_ID_REGEX } from '../constants.js'
@@ -31,7 +31,7 @@ function validateOrderId(orderId: string): void {
  */
 export async function buildPayOnceV2(
   client: SuiGrpcClient,
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: PayParams,
   sender: string,
 ): Promise<Transaction> {
@@ -67,7 +67,7 @@ export async function buildPayOnceV2(
  */
 export async function buildPayOnceRouted(
   client: SuiGrpcClient,
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: PayParams,
   sender: string,
 ): Promise<Transaction> {
@@ -107,7 +107,7 @@ export async function buildPayOnceRouted(
  */
 export async function buildPayOnce(
   client: SuiGrpcClient,
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: Omit<PayParams, 'orderId'>,
   sender: string,
 ): Promise<Transaction> {

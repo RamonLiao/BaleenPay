@@ -3,7 +3,7 @@
 /** All object IDs are 0x-prefixed hex strings */
 export type ObjectId = string
 
-export interface FloatSyncConfig {
+export interface BaleenPayConfig {
   network: 'mainnet' | 'testnet' | 'devnet'
   packageId: ObjectId
   merchantId: ObjectId
@@ -15,6 +15,7 @@ export interface FloatSyncConfig {
   graphqlUrl?: string
   vaultId?: ObjectId
   yieldVaultId?: ObjectId
+  stablecoinVaultId?: ObjectId
 }
 
 export interface PayParams {
@@ -55,7 +56,7 @@ export interface TransactionResult {
 export interface ExecutedResult {
   digest: string
   status: 'success' | 'failure'
-  events: FloatSyncEventData[]
+  events: BaleenPayEventData[]
   gasUsed: bigint
   payment?: { orderId: string; amount: bigint; coinType: string }
   subscription?: { subscriptionId: string; nextDue: number }
@@ -64,7 +65,7 @@ export interface ExecutedResult {
 
 // ── Event types ──
 
-export type FloatSyncEventName =
+export type BaleenPayEventName =
   | 'payment.received'
   | 'subscription.created'
   | 'subscription.processed'
@@ -78,8 +79,8 @@ export type FloatSyncEventName =
   | 'order.record_removed'
   | '*'
 
-export interface FloatSyncEventData {
-  type: FloatSyncEventName
+export interface BaleenPayEventData {
+  type: BaleenPayEventName
   merchantId?: string
   payer?: string
   amount?: bigint
@@ -89,7 +90,7 @@ export interface FloatSyncEventData {
   [key: string]: unknown
 }
 
-export type EventCallback = (event: FloatSyncEventData) => void
+export type EventCallback = (event: BaleenPayEventData) => void
 export type Unsubscribe = () => void
 
 // ── StableLayer types ──
@@ -97,7 +98,12 @@ export type Unsubscribe = () => void
 export interface StableLayerConfig {
   stableLayerPackageId: string
   stableLayerRegistryId: string
-  busdCoinType: string
+  farmPackageId: string
+  farmRegistryId: string
+  stablecoinType: string
+  usdcType: string
+  usdbType: string
+  mockFarmEntityType: string
 }
 
 export interface YieldInfo {
@@ -112,6 +118,7 @@ export interface KeeperParams {
   adminCapId: ObjectId
   vaultId: ObjectId
   yieldVaultId: ObjectId
+  stablecoinVaultId?: ObjectId
 }
 
 // ── Merchant info ──
@@ -122,10 +129,31 @@ export interface MerchantInfo {
   brandName: string
   totalReceived: bigint
   idlePrincipal: bigint
+  /** @deprecated Use BaleenPayClient.getAccruedYieldTyped() instead. Always 0 after migration. */
   accruedYield: bigint
   activeSubscriptions: number
   pausedByAdmin: boolean
   pausedBySelf: boolean
+}
+
+export interface MerchantBalance {
+  idle: bigint
+  farming: bigint
+  yield: bigint
+  total: bigint
+}
+
+export interface RedeemParams {
+  merchantCapId: ObjectId
+  amount: bigint
+  coinType: string
+  recipientAddress: string
+}
+
+export interface WithdrawParams {
+  merchantCapId: ObjectId
+  amount: bigint
+  coinType: string
 }
 
 export interface SubscriptionInfo {

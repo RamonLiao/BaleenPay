@@ -1,0 +1,6 @@
+[package]
+name = "baleenpay"
+edition = "2024"
+
+[addresses]
+baleenpay = "0x0"

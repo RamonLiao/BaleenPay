@@ -1,19 +1,19 @@
 import type {
-  FloatSyncConfig,
-  FloatSyncClientOptions,
+  BaleenPayConfig,
+  BaleenPayClientOptions,
   PayParams,
   SubscribeParams,
   FundParams,
   MerchantInfo,
   SubscriptionInfo,
-  FloatSyncEventData,
+  BaleenPayEventData,
   ObjectId,
   YieldInfo,
-} from '@floatsync/sdk'
+} from '@baleenpay/sdk'
 
-export interface FloatSyncProviderProps {
-  config: FloatSyncConfig
-  options?: FloatSyncClientOptions
+export interface BaleenPayProviderProps {
+  config: BaleenPayConfig
+  options?: BaleenPayClientOptions
   children: React.ReactNode
 }
 
@@ -81,7 +81,7 @@ export interface UsePaymentHistoryOptions {
 }
 
 export interface UsePaymentHistoryReturn {
-  events: FloatSyncEventData[]
+  events: BaleenPayEventData[]
   isLoading: boolean
   error: Error | null
   hasNextPage: boolean
@@ -172,14 +172,14 @@ export interface MerchantBadgeProps {
 }
 
 export type {
-  FloatSyncConfig,
-  FloatSyncClientOptions,
+  BaleenPayConfig,
+  BaleenPayClientOptions,
   PayParams,
   SubscribeParams,
   FundParams,
   MerchantInfo,
   SubscriptionInfo,
-  FloatSyncEventData,
+  BaleenPayEventData,
   ObjectId,
   YieldInfo,
 }

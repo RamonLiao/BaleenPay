@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { EVENT_TYPE_MAP, normalizeEvent } from '../src/events/types.js'
 import { EventStream } from '../src/events/stream.js'
-import type { FloatSyncEventData } from '../src/types.js'
+import type { BaleenPayEventData } from '../src/types.js'
 
 describe('EVENT_TYPE_MAP', () => {
   it('has entries for all event types', () => {
@@ -117,7 +117,7 @@ describe('EventStream', () => {
     expect(typeof unsub).toBe('function')
 
     // Dispatch an event — should call the callback
-    const event: FloatSyncEventData = { type: 'payment.received', amount: 100n }
+    const event: BaleenPayEventData = { type: 'payment.received', amount: 100n }
     stream.dispatch(event)
     expect(cb).toHaveBeenCalledOnce()
     expect(cb).toHaveBeenCalledWith(event)

@@ -44,7 +44,7 @@ Payer USDC ──pay──→ [BaleenPay Vault<USDC>] ──keeper batch──�
 ### File Changes
 
 ```
-floatsync/sources/
+baleenpay/sources/
 ├── merchant.move      ← modify: +credit_external_yield, claim_yield takes YieldVault
 ├── payment.move       ← modify: +pay_once_routed, +subscribe_routed (router-aware)
 ├── router.move        ← major: +MODE_STABLELAYER, +Vault, +YieldVault, +keeper ops
@@ -364,10 +364,10 @@ tx.moveCall({
 })
 ```
 
-### FloatSync Client Changes
+### BaleenPay Client Changes
 
 ```typescript
-class FloatSync {
+class BaleenPay {
   // New
   async payRouted(params: PayParams, sender: string): Promise<TransactionResult>
   async getYieldInfo(merchantId?: ObjectId): Promise<YieldInfo>

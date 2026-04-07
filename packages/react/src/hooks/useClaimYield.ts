@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
-import { useFloatSync } from './useFloatSync.js'
+import { useBaleenPay } from './useBaleenPay.js'
 import type { UseClaimYieldReturn, MutationStatus } from '../types.js'
 
 /**
@@ -10,7 +10,7 @@ import type { UseClaimYieldReturn, MutationStatus } from '../types.js'
  * Error/rejected branches auto-reset is caller's responsibility via reset().
  */
 export function useClaimYield(): UseClaimYieldReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const dAppKit = useDAppKit()
   const account = useCurrentAccount()
 

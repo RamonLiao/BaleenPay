@@ -1,0 +1,34 @@
+{
+  "network": "testnet",
+  "version": "v2 (fresh deploy — dual-pause model)",
+  "deployer": "0x1509b5fdf09296b2cf749a710e36da06f5693ccd5b2144ad643b3a895abcbc4c",
+  "txDigest": "8eKLnYhrY5LJbptkdejW42zKQGJMh7acRisMaANaw5QD",
+  "epoch": 1050,
+  "gasCost": "94679880 MIST (0.0947 SUI)",
+  "packageId": "0xe0eb53cce531ab129e499b06ed1a858bb64da08e6c53c18ab4c85ef01306b32a",
+  "modules": ["brand_usd", "events", "merchant", "payment", "router"],
+  "objects": {
+    "UpgradeCap": "0x041bd612badd6c3845bb9c4cf0553a7ae73aa35cd1e1a4cac63a25d59bc68213",
+    "AdminCap": "0xece60758329e26632971fada219e5c45eb0d01676450ea697baafb22e2d927f0",
+    "TreasuryCap_BRAND_USD": "0xf76d304033c46e2743f42bfca101a7a91cef7f9857c3fd0820c029719caa93ee",
+    "CoinMetadata_BRAND_USD": "0x0776003a5f8703eaaea323706daa955d454bc4a4a27d95586b36ad72088b9e64",
+    "MerchantRegistry": "0x2b0584da2655e87873a72977a36741d64e59d68e550016ebb38be5fe243a321f",
+    "RouterConfig": "0x0bae66f0910b0d22b30d6be5bc2c3f0272ef9c917b34b041608c0fbd31264e8e"
+  },
+  "deployedAt": "2026-03-26",
+  "smokeTest": {
+    "registerMerchant": {
+      "MerchantAccount": "0x4db0ff62d5402f3970028995312a4fd0c243cef9ce6d1e4ace77667155c17c24",
+      "MerchantCap": "0x93e30ffb648ddbee6a93518f82eb332a39c1b3457dc7c02544fb105e02d520e2",
+      "brandName": "BaleenPay Demo Shop v2"
+    },
+    "payOnceV2": "PASS — PaymentReceivedV2 event + OrderKey dynamic field created",
+    "orderIdDedup": "PASS — EOrderAlreadyPaid (code 18) on duplicate SMOKE-TEST-001",
+    "adminFreeze": "PASS — MerchantPaused { by_admin: true }, payment blocked (EPaused code 2)",
+    "adminUnfreeze": "PASS — MerchantUnpaused { by_admin: true }"
+  },
+  "previousDeploy": {
+    "packageId": "0x7d12a373e5802e2036eb80463fee8a6ef3d1f6d2327cc33b1b239fa943165097",
+    "reason": "struct layout change (MerchantAccount dual-pause model), incompatible upgrade"
+  }
+}

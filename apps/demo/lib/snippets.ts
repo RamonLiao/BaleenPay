@@ -8,9 +8,9 @@ export const DEVELOPER_SNIPPETS: Snippet[] = [
   {
     title: 'Quick Start',
     description: 'Initialize the SDK with your testnet config',
-    code: `import { FloatSync } from '@floatsync/sdk'
+    code: `import { BaleenPay } from '@baleenpay/sdk'
 
-const fs = new FloatSync({
+const fs = new BaleenPay({
   network: 'testnet',
   packageId: '0xe0eb...306b32a',
   merchantId: '0x4db0...c17c24',
@@ -42,7 +42,7 @@ const result = await wallet.signAndExecuteTransaction({ transaction: tx })`,
   {
     title: 'React Hook — usePayment',
     description: 'State-managed payment flow in a React component',
-    code: `import { usePayment } from '@floatsync/react'
+    code: `import { usePayment } from '@baleenpay/react'
 
 function CheckoutButton() {
   const { pay, status, error, result, reset } = usePayment()
@@ -60,7 +60,7 @@ function CheckoutButton() {
   {
     title: 'Drop-in Component',
     description: 'One-line checkout button with built-in state management',
-    code: `import { CheckoutButton } from '@floatsync/react'
+    code: `import { CheckoutButton } from '@baleenpay/react'
 
 <CheckoutButton
   amount={49_000_000n}

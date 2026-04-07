@@ -7,7 +7,7 @@ const DEFAULT_COINS = ['SUI', 'USDC']
 /**
  * Minimal payment form: amount input + coin selector + pay button.
  *
- * No inline styles — all elements have `data-floatsync-*` attributes for CSS targeting.
+ * No inline styles — all elements have `data-baleenpay-*` attributes for CSS targeting.
  * Generates unique IDs for label/input association (SSR-safe via useId).
  */
 export function PaymentForm({
@@ -60,10 +60,10 @@ export function PaymentForm({
     <form
       onSubmit={handleSubmit}
       className={className}
-      data-floatsync="payment-form"
+      data-baleenpay="payment-form"
       data-status={status}
     >
-      <div data-floatsync="field">
+      <div data-baleenpay="field">
         <label htmlFor={`${formId}-amount`}>Amount</label>
         <input
           id={`${formId}-amount`}
@@ -74,12 +74,12 @@ export function PaymentForm({
           onChange={(e) => setAmount(e.target.value)}
           disabled={disabled || isBusy}
           placeholder="0"
-          data-floatsync="amount-input"
+          data-baleenpay="amount-input"
           required
         />
       </div>
 
-      <div data-floatsync="field">
+      <div data-baleenpay="field">
         <label htmlFor={`${formId}-coin`}>Coin</label>
         {coins.length === 1 ? (
           <input
@@ -87,7 +87,7 @@ export function PaymentForm({
             type="text"
             value={coins[0]}
             readOnly
-            data-floatsync="coin-input"
+            data-baleenpay="coin-input"
           />
         ) : (
           <select
@@ -95,7 +95,7 @@ export function PaymentForm({
             value={coin}
             onChange={(e) => setCoin(e.target.value)}
             disabled={disabled || isBusy}
-            data-floatsync="coin-select"
+            data-baleenpay="coin-select"
           >
             {coins.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -105,7 +105,7 @@ export function PaymentForm({
       </div>
 
       {externalOrderId === undefined && (
-        <div data-floatsync="field">
+        <div data-baleenpay="field">
           <label htmlFor={`${formId}-order`}>Order ID</label>
           <input
             id={`${formId}-order`}
@@ -114,7 +114,7 @@ export function PaymentForm({
             onChange={(e) => setOrderId(e.target.value)}
             disabled={disabled || isBusy}
             placeholder="order-123"
-            data-floatsync="order-input"
+            data-baleenpay="order-input"
             required
           />
         </div>
@@ -123,20 +123,20 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={disabled || isBusy || !amount || !orderId.trim()}
-        data-floatsync="submit"
+        data-baleenpay="submit"
         data-status={status}
       >
         {statusLabel(status)}
       </button>
 
       {status === 'error' && error && (
-        <p data-floatsync="error" role="alert">{error.message}</p>
+        <p data-baleenpay="error" role="alert">{error.message}</p>
       )}
       {status === 'rejected' && (
-        <p data-floatsync="rejected" role="alert">Transaction was rejected</p>
+        <p data-baleenpay="rejected" role="alert">Transaction was rejected</p>
       )}
       {status === 'success' && (
-        <p data-floatsync="success">Payment confirmed</p>
+        <p data-baleenpay="success">Payment confirmed</p>
       )}
     </form>
   )

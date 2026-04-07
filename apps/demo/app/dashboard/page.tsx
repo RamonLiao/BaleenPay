@@ -1,8 +1,5 @@
 'use client'
 
-import { useMerchant, usePaymentHistory, useYieldInfo, useYieldHistory, useClaimYield } from '@floatsync/react'
-import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react'
-import { buildClaimYield, buildSelfPause, buildSelfUnpause } from '@floatsync/sdk'
 import { useState } from 'react'
 import { WalletGuard } from '@/components/WalletGuard'
 import { TxStatus } from '@/components/TxStatus'
@@ -10,18 +7,27 @@ import { StatCard } from '@/components/StatCard'
 import { PaymentTable } from '@/components/PaymentTable'
 import { YieldChart } from '@/components/YieldChart'
 import { ClaimHistory } from '@/components/ClaimHistory'
-import { DEMO_CONFIG, MERCHANT_CAP_ID } from '@/lib/config'
+import { MERCHANT_CAP_ID } from '@/lib/config'
 import { formatAmount } from '@/lib/format'
-import type { MutationStatus } from '@floatsync/react'
+import {
+  useMerchantHook,
+  usePaymentHistoryHook,
+  useYieldInfoHook,
+  useYieldHistoryHook,
+  useClaimYieldHook,
+  useDAppKitHook,
+  useCurrentAccountHook,
+} from '@/lib/hooks'
+import type { MutationStatus } from '@baleenpay/react'
 
 export default function DashboardPage() {
-  const account = useCurrentAccount()
-  const dAppKit = useDAppKit()
-  const { merchant, isLoading: merchantLoading, refetch: refetchMerchant } = useMerchant()
-  const { events, isLoading: historyLoading, hasNextPage, fetchNextPage } = usePaymentHistory()
-  const { yieldInfo, isLoading: yieldInfoLoading } = useYieldInfo()
-  const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistory()
-  const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYield()
+  const account = useCurrentAccountHook()
+  const dAppKit = useDAppKitHook()
+  const { merchant, isLoading: merchantLoading, refetch: refetchMerchant } = useMerchantHook()
+  const { events, isLoading: historyLoading, hasNextPage, fetchNextPage } = usePaymentHistoryHook()
+  const { yieldInfo, isLoading: yieldInfoLoading } = useYieldInfoHook()
+  const { dataPoints, claimEvents, isLoading: yieldHistoryLoading } = useYieldHistoryHook()
+  const { claim: claimYield, status: claimStatus, error: claimError, txDigest: claimDigest, reset: resetClaim } = useClaimYieldHook()
 
   const isPaused = merchant?.pausedByAdmin || merchant?.pausedBySelf || false
 
@@ -40,11 +46,12 @@ export default function DashboardPage() {
     try {
       resetAction()
       setActionStatus('signing')
+
       const tx = buildFn()
       const result = await dAppKit.signAndExecuteTransaction({ transaction: tx })
-      // NOTE: v2 dapp-kit returns flat result with .digest — v1 pattern (FailedTransaction/Transaction) kept for now
       if (result.FailedTransaction) {
-        throw new Error(result.FailedTransaction.status.error?.message ?? 'Transaction failed')
+        const err = result.FailedTransaction.status.error
+        throw new Error(err ? (typeof err === 'string' ? err : err.message ?? 'Transaction failed') : 'Transaction failed')
       }
       setActionDigest(result.Transaction.digest)
       setActionStatus('success')
@@ -92,7 +99,7 @@ export default function DashboardPage() {
               <StatCard
                 label="Total Received"
                 value={formatAmount(merchant.totalReceived)}
-                sub="MIST"
+                sub="USDC"
               />
               <StatCard
                 label="Idle Principal"
@@ -101,8 +108,8 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="Accrued Yield"
-                value={formatAmount(merchant.accruedYield)}
-                sub="Claimable"
+                value={yieldInfoLoading ? '...' : formatAmount(yieldInfo?.accruedYield ?? 0n)}
+                sub="Claimable USDB"
               />
               <StatCard
                 label="Active Subscriptions"
@@ -144,14 +151,14 @@ export default function DashboardPage() {
                   <div>
                     <h4 className="text-sm font-semibold text-ocean-deep mb-2">Claim Yield</h4>
                     <p className="text-sm text-ocean-ink mb-4">
-                      Accrued: {formatAmount(yieldInfo?.accruedYield ?? merchant.accruedYield)} MIST
+                      Accrued: {formatAmount(yieldInfo?.accruedYield ?? 0n)} USDB
                     </p>
                   </div>
                   <div>
                     <button
                       onClick={() => claimYield(MERCHANT_CAP_ID)}
                       disabled={
-                        (yieldInfo?.accruedYield ?? merchant.accruedYield) === 0n ||
+                        (yieldInfo?.accruedYield ?? 0n) === 0n ||
                         (claimStatus !== 'idle' && claimStatus !== 'error' && claimStatus !== 'rejected' && claimStatus !== 'success')
                       }
                       className="rounded-xl bg-gradient-to-r from-ocean-water to-ocean-teal px-6 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -184,11 +191,14 @@ export default function DashboardPage() {
                 </p>
                 <button
                   onClick={() =>
-                    executeAdminTx(() =>
-                      isPaused
+                    executeAdminTx(() => {
+                      // In demo mode executeAdminTx never calls this
+                      const { buildSelfPause, buildSelfUnpause } = require('@baleenpay/sdk')
+                      const { DEMO_CONFIG } = require('@/lib/config')
+                      return isPaused
                         ? buildSelfUnpause(DEMO_CONFIG, MERCHANT_CAP_ID)
                         : buildSelfPause(DEMO_CONFIG, MERCHANT_CAP_ID)
-                    )
+                    })
                   }
                   disabled={actionStatus !== 'idle' && actionStatus !== 'error' && actionStatus !== 'rejected'}
                   className={`rounded-xl px-6 py-2.5 text-sm font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${

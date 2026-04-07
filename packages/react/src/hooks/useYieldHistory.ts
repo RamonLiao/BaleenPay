@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useFloatSync } from './useFloatSync.js'
+import { useBaleenPay } from './useBaleenPay.js'
 import type { ObjectId, UseYieldHistoryReturn } from '../types.js'
 
 /**
@@ -9,11 +9,11 @@ import type { ObjectId, UseYieldHistoryReturn } from '../types.js'
  * exposes yield-specific event queries.
  */
 export function useYieldHistory(merchantId?: ObjectId): UseYieldHistoryReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const id = merchantId ?? client.config.merchantId
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['floatsync', 'yield-history', id],
+    queryKey: ['baleenpay', 'yield-history', id],
     queryFn: async () => {
       // MVP stub — indexer yield history not yet available.
       // Return empty data so consumers can wire up UI now.

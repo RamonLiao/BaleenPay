@@ -1,8 +1,9 @@
 import { Transaction } from '@mysten/sui/transactions'
-import type { FloatSyncConfig, RegisterParams } from '../types.js'
+import type { BaleenPayConfig, RegisterParams, WithdrawParams } from '../types.js'
+import { resolveCoin, coinTypeArg } from '../coins/registry.js'
 
 export function buildRegisterMerchant(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   params: RegisterParams,
 ): Transaction {
   const tx = new Transaction()
@@ -23,7 +24,7 @@ export function buildRegisterMerchant(
 }
 
 export function buildSelfPause(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   merchantCapId: string,
 ): Transaction {
   const tx = new Transaction()
@@ -38,7 +39,7 @@ export function buildSelfPause(
 }
 
 export function buildSelfUnpause(
-  config: FloatSyncConfig,
+  config: BaleenPayConfig,
   merchantCapId: string,
 ): Transaction {
   const tx = new Transaction()
@@ -47,6 +48,28 @@ export function buildSelfUnpause(
     arguments: [
       tx.object(merchantCapId),
       tx.object(config.merchantId),
+    ],
+  })
+  return tx
+}
+
+export function buildMerchantWithdraw(
+  config: BaleenPayConfig,
+  params: WithdrawParams,
+): Transaction {
+  if (params.amount <= 0n) throw new Error('Amount must be greater than zero')
+  if (!config.vaultId) throw new Error('vaultId is required in config for merchant_withdraw')
+
+  const resolved = resolveCoin(config.network, params.coinType)
+  const tx = new Transaction()
+  tx.moveCall({
+    target: `${config.packageId}::router::merchant_withdraw`,
+    typeArguments: [coinTypeArg(resolved.type)],
+    arguments: [
+      tx.object(params.merchantCapId),
+      tx.object(config.merchantId),
+      tx.object(config.vaultId),
+      tx.pure.u64(params.amount),
     ],
   })
   return tx

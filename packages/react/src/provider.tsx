@@ -1,19 +1,19 @@
 import { createContext, useMemo } from 'react'
-import { FloatSync } from '@floatsync/sdk'
-import type { FloatSyncProviderProps } from './types.js'
+import { BaleenPay } from '@baleenpay/sdk'
+import type { BaleenPayProviderProps } from './types.js'
 
-export const FloatSyncContext = createContext<FloatSync | null>(null)
+export const BaleenPayContext = createContext<BaleenPay | null>(null)
 
-export function FloatSyncProvider({ config, options, children }: FloatSyncProviderProps) {
+export function BaleenPayProvider({ config, options, children }: BaleenPayProviderProps) {
   const client = useMemo(
-    () => new FloatSync(config, options),
+    () => new BaleenPay(config, options),
     // Stable key: re-create only when identity-affecting config changes
     [config.packageId, config.merchantId, config.network, config.grpcUrl, config.graphqlUrl, options?.pendingTtlMs],
   )
 
   return (
-    <FloatSyncContext.Provider value={client}>
+    <BaleenPayContext.Provider value={client}>
       {children}
-    </FloatSyncContext.Provider>
+    </BaleenPayContext.Provider>
   )
 }

@@ -1,9 +1,9 @@
 // packages/sdk/src/events/types.ts
 
-import type { FloatSyncEventData, FloatSyncEventName } from '../types.js'
+import type { BaleenPayEventData, BaleenPayEventName } from '../types.js'
 
 /** Maps Move event struct name → SDK event name */
-export const EVENT_TYPE_MAP: Record<string, FloatSyncEventName> = {
+export const EVENT_TYPE_MAP: Record<string, BaleenPayEventName> = {
   PaymentReceived: 'payment.received',
   PaymentReceivedV2: 'payment.received',
   SubscriptionCreated: 'subscription.created',
@@ -31,22 +31,22 @@ function extractStructName(moveType: string): string {
 }
 
 /**
- * Normalize an on-chain Move event into a FloatSyncEventData.
+ * Normalize an on-chain Move event into a BaleenPayEventData.
  */
 export function normalizeEvent(
   moveType: string,
   parsedJson: Record<string, unknown>,
-): FloatSyncEventData {
+): BaleenPayEventData {
   const structName = extractStructName(moveType)
   const eventName = EVENT_TYPE_MAP[structName]
 
   if (!eventName) {
-    return { type: '*' as FloatSyncEventName, ...parsedJson }
+    return { type: '*' as BaleenPayEventName, ...parsedJson }
   }
 
   const isV2 = V2_EVENTS.has(structName)
 
-  const base: FloatSyncEventData = {
+  const base: BaleenPayEventData = {
     type: eventName,
   }
 

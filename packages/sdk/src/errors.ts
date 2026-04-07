@@ -2,37 +2,37 @@
 
 import { ABORT_CODE_MAP } from './constants.js'
 
-export class FloatSyncError extends Error {
+export class BaleenPayError extends Error {
   code: string
   constructor(code: string, message: string) {
     super(message)
-    this.name = 'FloatSyncError'
+    this.name = 'BaleenPayError'
     this.code = code
   }
 }
 
-export class PaymentError extends FloatSyncError {
+export class PaymentError extends BaleenPayError {
   constructor(code: string, message: string) {
     super(code, message)
     this.name = 'PaymentError'
   }
 }
 
-export class MerchantError extends FloatSyncError {
+export class MerchantError extends BaleenPayError {
   constructor(code: string, message: string) {
     super(code, message)
     this.name = 'MerchantError'
   }
 }
 
-export class ValidationError extends FloatSyncError {
+export class ValidationError extends BaleenPayError {
   constructor(code: string, message: string) {
     super(code, message)
     this.name = 'ValidationError'
   }
 }
 
-export class NetworkError extends FloatSyncError {
+export class NetworkError extends BaleenPayError {
   constructor(code: string, message: string) {
     super(code, message)
     this.name = 'NetworkError'
@@ -43,11 +43,11 @@ const PAYMENT_CODES = new Set([10, 13, 15, 18, 23])
 const MERCHANT_CODES = new Set([0, 2, 6, 7, 8, 12])
 const VALIDATION_CODES = new Set([14, 17, 19, 22])
 
-export function parseAbortCode(status: number): FloatSyncError {
+export function parseAbortCode(status: number): BaleenPayError {
   const entry = ABORT_CODE_MAP[status]
 
   if (!entry) {
-    return new FloatSyncError('UNKNOWN', `Unknown abort code: ${status}`)
+    return new BaleenPayError('UNKNOWN', `Unknown abort code: ${status}`)
   }
 
   const { code, message } = entry
@@ -56,5 +56,5 @@ export function parseAbortCode(status: number): FloatSyncError {
   if (MERCHANT_CODES.has(status)) return new MerchantError(code, message)
   if (VALIDATION_CODES.has(status)) return new ValidationError(code, message)
 
-  return new FloatSyncError(code, message)
+  return new BaleenPayError(code, message)
 }

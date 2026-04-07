@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useFloatSync } from './useFloatSync.js'
-import type { FloatSyncEventData, UsePaymentHistoryOptions, UsePaymentHistoryReturn } from '../types.js'
+import { useBaleenPay } from './useBaleenPay.js'
+import type { BaleenPayEventData, UsePaymentHistoryOptions, UsePaymentHistoryReturn } from '../types.js'
 
 /**
  * Query hook for payment history via on-chain events.
@@ -9,15 +9,15 @@ import type { FloatSyncEventData, UsePaymentHistoryOptions, UsePaymentHistoryRet
  * Supports pagination (cursor-based) and payer filtering.
  */
 export function usePaymentHistory(options?: UsePaymentHistoryOptions): UsePaymentHistoryReturn {
-  const client = useFloatSync()
+  const client = useBaleenPay()
   const queryClient = useQueryClient()
   const { limit = 20, order = 'desc', payer, enabled = true } = options ?? {}
 
   const [cursor, setCursor] = useState<string | undefined>(undefined)
-  const [allEvents, setAllEvents] = useState<FloatSyncEventData[]>([])
+  const [allEvents, setAllEvents] = useState<BaleenPayEventData[]>([])
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['floatsync', 'paymentHistory', client.config.merchantId, { cursor, limit, order, payer }],
+    queryKey: ['baleenpay', 'paymentHistory', client.config.merchantId, { cursor, limit, order, payer }],
     queryFn: () => client.getPaymentHistory({ cursor, limit, order, payer }),
     enabled,
   })
@@ -36,7 +36,7 @@ export function usePaymentHistory(options?: UsePaymentHistoryOptions): UsePaymen
   const refetch = useCallback(() => {
     setCursor(undefined)
     setAllEvents([])
-    queryClient.invalidateQueries({ queryKey: ['floatsync', 'paymentHistory', client.config.merchantId] })
+    queryClient.invalidateQueries({ queryKey: ['baleenpay', 'paymentHistory', client.config.merchantId] })
   }, [client.config.merchantId, queryClient])
 
   return {

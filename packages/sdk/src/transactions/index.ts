@@ -1,6 +1,7 @@
 export { buildPayOnce, buildPayOnceV2, buildPayOnceRouted } from './pay.js'
 export { buildSubscribe, buildSubscribeV2 } from './subscribe.js'
-export { buildRegisterMerchant, buildSelfPause, buildSelfUnpause } from './merchant.js'
+export { buildRegisterMerchant, buildSelfPause, buildSelfUnpause, buildMerchantWithdraw } from './merchant.js'
+export { buildMerchantRedeem } from './redeem.js'
 export { buildClaimYield } from './yield.js'
 export {
   buildKeeperWithdraw,

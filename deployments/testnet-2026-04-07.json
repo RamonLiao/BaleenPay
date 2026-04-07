@@ -1,0 +1,45 @@
+{
+  "network": "testnet",
+  "chainId": "4c78adac",
+  "timestamp": "2026-04-07T00:48:54Z",
+  "digest": "GyP2BBpvtx7z3XhhA824TEMHMycsfHQKs4H5X5RUTd44",
+  "deployer": "0x1509b5fdf09296b2cf749a710e36da06f5693ccd5b2144ad643b3a895abcbc4c",
+  "packageId": "0x5eea0defa80c75a3f20588e01dba2f57a1e97ad154a487ab0c1979c34c8855e8",
+  "upgradedPackageId_v2": "0x1e748152729396f77f4424c7871c96a1bd1ec5c15fe3d63306a0329a9ca2e7bd",
+  "upgradedPackageId": "0x9b13868fe76b775524ae10ca2e1fb19b7cc306b9d0a7879f21487752cb845ec2",
+  "upgradeDigest_v2": "9UnP2kPck5YRZFM7t85XrWnzMC7rb6S6zwzChjXS3MHe",
+  "upgradeDigest": "H9fXN7uxgXNAy2bqiqAgUe7Yqfzr3MXcqv2iqwc2AwY",
+  "version": 3,
+  "modules": ["brand_usd", "events", "merchant", "payment", "router"],
+  "objects": {
+    "AdminCap": "0x140c6a1721434374f3ca6c1c5d80e6bcaa67cebfcd55c7b1ffb758bbd3d3650e",
+    "UpgradeCap": "0xa0a2f41e7c70d25ce3ba54c10b90939dfae7b47de6fce28b4e3c822ddf87e731",
+    "RouterConfig": "0x931b0a2c6738a448e79ccbc6c06573a8860a8e1e97979b2f2f49983461749839",
+    "MerchantRegistry": "0xff0c94c12da1bc55072dcfcd18ff61bf51b5f64ddfd287aa6659197418fcf586",
+    "TreasuryCap_BRAND_USD": "0x9389adc6d91bd64e2e515058fc7edaae95c52568743f7bae3b6cf40ac70b621c",
+    "CoinMetadata_BRAND_USD": "0xcb9db8ff3c8078f0b95647a63b7915291e66abe9d09ae390305b8598c3e4f527",
+    "MerchantAccount": "0x9ec4bd37033ccfa03da3a74a1c0d251b840610d602417ed17cc7f98cc9be221b",
+    "MerchantCap": "0x7ba95f5f4932423df5c6fb6a6d65d3298aa2f874eb5741348ba4bb35b9bdb83f",
+    "Vault_USDC": "0x6c7f42f261ba273c360d88c7518b8d70968ff915d25e62466c60923543203dad",
+    "YieldVault_Stablecoin": "0x24add94a4728ac029267a1ade3ad024e5c2ad8c0b68b0eb3dae59f0bad5f587c",
+    "StablecoinVault_Stablecoin": "0x7c295154e2aff2de0a2381ee98dfb26be0cb184dcc30c6956a1b22e2f36ee1a5",
+    "YieldVault_USDB": "0xe90a8e473936b8d920afb5c5a793181a0fc8d7a62a9021f4d270205e69b23775"
+  },
+  "setup": {
+    "registerMerchant": "6bUqniYjtcGP1ZgrtMzUpgmzgKNZonjjRN56vwyWcgzj",
+    "createVault": "9vd45ZL2ie5AvBPyDuGarr47bUeX5W2UpR3izHy8JyDp",
+    "createYieldVault": "ArGfRQVXHppN3Pp76byYagUa5EoKL3SsPbrGWqRA7P2k",
+    "setModeStableLayer": "DWPubCrPE9ct8o4W96U94B82KhUh4pFPbKmEdL5zs6pH",
+    "createStablecoinVault": "8iaLTocq8Br4Levbv2CutQCDXzzPN2FkexHJ8L6gaXzE"
+  },
+  "coinTypes": {
+    "USDC": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+    "StableLayerStablecoin": "0xe25a20601a1ecc2fa5ac9e5d37b52f9ce70a1ebe787856184ffb7dbe31dba4c1::stable_layer::Stablecoin"
+  },
+  "stableLayer": {
+    "packageId": "0x9c248c80c3a757167780f17e0c00a4d293280be7276f1b81a153f6e47d2567c9",
+    "registryId": "0xfa0fd96e0fbc07dc6bdc23cc1ac5b4c0056f4b469b9db0a70b6ea01c14a4c7b5",
+    "mockFarmPackageId": "0x3a55ec8fabe5f3e982908ed3a7c3065f26e83ab226eb8d3450177dbaac25878b",
+    "mockFarmRegistryId": "0xc3e8d2e33e36f6a4b5c199fe2dde3ba6dc29e7af8dd045c86e62d7c21f374d02"
+  }
+}

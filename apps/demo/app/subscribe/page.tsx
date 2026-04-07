@@ -1,19 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useSubscription } from '@floatsync/react'
 import { WalletGuard } from '@/components/WalletGuard'
 import { TxStatus } from '@/components/TxStatus'
 import { CoinToggle } from '@/components/CoinToggle'
 import { PlanCard } from '@/components/PlanCard'
 import { DEMO_PLANS, priceToAmount } from '@/lib/products'
+import { useSubscriptionHook } from '@/lib/hooks'
 
 const PERIOD_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 export default function SubscribePage() {
   const [selectedId, setSelectedId] = useState('monthly')
   const [coin, setCoin] = useState('USDC')
-  const { subscribe, status, error, result, reset } = useSubscription()
+  const { subscribe, status, error, result, reset } = useSubscriptionHook()
 
   const plan = DEMO_PLANS.find((p) => p.id === selectedId)!
   const amountPerPeriod = priceToAmount(plan.pricePerMonth, coin)

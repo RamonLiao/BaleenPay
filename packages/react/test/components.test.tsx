@@ -107,7 +107,7 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 
 import {
-  FloatSyncProvider,
+  BaleenPayProvider,
   CheckoutButton,
   PaymentForm,
   SubscribeButton,
@@ -121,7 +121,7 @@ const testConfig = {
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <FloatSyncProvider config={testConfig}>{children}</FloatSyncProvider>
+  return <BaleenPayProvider config={testConfig}>{children}</BaleenPayProvider>
 }
 
 // ── CheckoutButton ──
@@ -386,13 +386,13 @@ describe('PaymentForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Insufficient balance')
   })
 
-  it('applies className and data-floatsync', () => {
+  it('applies className and data-baleenpay', () => {
     render(
       <Wrapper>
         <PaymentForm className="my-form" />
       </Wrapper>,
     )
-    const form = document.querySelector('[data-floatsync="payment-form"]')
+    const form = document.querySelector('[data-baleenpay="payment-form"]')
     expect(form).toHaveClass('my-form')
   })
 })
@@ -591,7 +591,7 @@ describe('MerchantBadge', () => {
       </Wrapper>,
     )
 
-    expect(document.querySelector('[data-floatsync="merchant-badge"]')).toHaveClass('badge')
+    expect(document.querySelector('[data-baleenpay="merchant-badge"]')).toHaveClass('badge')
   })
 
   it('shows "No merchant data" when empty', () => {

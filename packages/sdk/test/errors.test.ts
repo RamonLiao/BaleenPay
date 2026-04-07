@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  FloatSyncError,
+  BaleenPayError,
   PaymentError,
   MerchantError,
   ValidationError,
@@ -9,36 +9,36 @@ import {
 } from '../src/errors.js'
 
 describe('Error hierarchy', () => {
-  it('PaymentError instanceof FloatSyncError', () => {
+  it('PaymentError instanceof BaleenPayError', () => {
     const err = new PaymentError('TEST', 'test')
-    expect(err).toBeInstanceOf(FloatSyncError)
+    expect(err).toBeInstanceOf(BaleenPayError)
     expect(err).toBeInstanceOf(Error)
     expect(err.name).toBe('PaymentError')
   })
 
-  it('MerchantError instanceof FloatSyncError', () => {
+  it('MerchantError instanceof BaleenPayError', () => {
     const err = new MerchantError('TEST', 'test')
-    expect(err).toBeInstanceOf(FloatSyncError)
+    expect(err).toBeInstanceOf(BaleenPayError)
     expect(err.name).toBe('MerchantError')
   })
 
-  it('ValidationError instanceof FloatSyncError', () => {
+  it('ValidationError instanceof BaleenPayError', () => {
     const err = new ValidationError('TEST', 'test')
-    expect(err).toBeInstanceOf(FloatSyncError)
+    expect(err).toBeInstanceOf(BaleenPayError)
     expect(err.name).toBe('ValidationError')
   })
 
-  it('NetworkError instanceof FloatSyncError', () => {
+  it('NetworkError instanceof BaleenPayError', () => {
     const err = new NetworkError('TEST', 'test')
-    expect(err).toBeInstanceOf(FloatSyncError)
+    expect(err).toBeInstanceOf(BaleenPayError)
     expect(err.name).toBe('NetworkError')
   })
 
-  it('FloatSyncError has code and message', () => {
-    const err = new FloatSyncError('FOO', 'bar')
+  it('BaleenPayError has code and message', () => {
+    const err = new BaleenPayError('FOO', 'bar')
     expect(err.code).toBe('FOO')
     expect(err.message).toBe('bar')
-    expect(err.name).toBe('FloatSyncError')
+    expect(err.name).toBe('BaleenPayError')
   })
 })
 
@@ -125,19 +125,19 @@ describe('parseAbortCode', () => {
     expect(err).toBeInstanceOf(ValidationError)
   })
 
-  it('returns FloatSyncError for unmapped codes (3, 11, 16, 20, 21)', () => {
+  it('returns BaleenPayError for unmapped codes (3, 11, 16, 20, 21)', () => {
     for (const code of [3, 11, 16, 20, 21]) {
       const err = parseAbortCode(code)
-      expect(err).toBeInstanceOf(FloatSyncError)
+      expect(err).toBeInstanceOf(BaleenPayError)
       expect(err).not.toBeInstanceOf(PaymentError)
       expect(err).not.toBeInstanceOf(MerchantError)
       expect(err).not.toBeInstanceOf(ValidationError)
     }
   })
 
-  it('returns FloatSyncError with UNKNOWN code for unknown abort code', () => {
+  it('returns BaleenPayError with UNKNOWN code for unknown abort code', () => {
     const err = parseAbortCode(999)
-    expect(err).toBeInstanceOf(FloatSyncError)
+    expect(err).toBeInstanceOf(BaleenPayError)
     expect(err.code).toBe('UNKNOWN')
     expect(err.message).toContain('999')
   })
