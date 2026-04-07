@@ -49,7 +49,7 @@ fun test_attack_keeper_deposit_while_paused() {
     let admin_cap = scenario.take_from_sender<AdminCap>();
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
     test_scenario::return_shared(account);
 
     // Create vault
@@ -66,8 +66,8 @@ fun test_attack_keeper_deposit_while_paused() {
     router::keeper_deposit_to_farm(&admin_cap, &mut account, &mut sv, coin);
 
     // Verify accounting: idle→farming even while paused
-    assert!(merchant::get_idle_principal(&account) == 0);
-    assert!(merchant::get_farming_principal(&account) == 1000);
+    assert!(merchant::idle_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 1000);
 
     test_scenario::return_shared(sv);
     test_scenario::return_shared(account);

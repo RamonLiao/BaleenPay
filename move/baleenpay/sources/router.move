@@ -38,7 +38,7 @@ public struct RouterConfig has key {
 public struct Vault<phantom T> has key {
     id: UID,
     balance: Balance<T>,
-    total_deposited: u64,
+    total_withdrawn: u64,
     total_yield_harvested: u64,
 }
 
@@ -88,7 +88,7 @@ public fun create_vault<T>(_admin: &AdminCap, ctx: &mut TxContext) {
     transfer::share_object(Vault<T> {
         id: object::new(ctx),
         balance: balance::zero(),
-        total_deposited: 0,
+        total_withdrawn: 0,
         total_yield_harvested: 0,
     });
 }
@@ -137,8 +137,8 @@ public fun take_stablecoin<T>(
     ctx: &mut TxContext,
 ): Coin<T> {
     assert!(amount > 0, EZeroAmount);
-    assert!(merchant::get_merchant_id(cap) == object::id(account), ENotMerchantOwner);
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(merchant::merchant_id(cap) == object::id(account), ENotMerchantOwner);
+    assert!(!merchant::is_paused(account), EPaused);
     merchant::return_from_farming(account, amount);
     events::emit_farm_redeemed(object::id(account), amount);
     stablecoin_vault.balance.split(amount).into_coin(ctx)
@@ -184,8 +184,8 @@ public fun keeper_withdraw<T>(
     ctx: &mut TxContext,
 ): Coin<T> {
     assert!(amount > 0, EZeroAmount);
-    assert!(vault.total_deposited <= 18_446_744_073_709_551_615 - amount, EOverflow);
-    vault.total_deposited = vault.total_deposited + amount;
+    assert!(vault.total_withdrawn <= 18_446_744_073_709_551_615 - amount, EOverflow);
+    vault.total_withdrawn = vault.total_withdrawn + amount;
     events::emit_vault_withdrawn(
         object::id(vault),
         amount,
@@ -221,7 +221,7 @@ public fun merchant_withdraw<T>(
     assert!(amount > 0, EZeroAmount);
     merchant::deduct_idle_principal(cap, account, amount);
     let coin = vault.balance.split(amount).into_coin(ctx);
-    transfer::public_transfer(coin, merchant::get_owner(account));
+    transfer::public_transfer(coin, merchant::owner(account));
     events::emit_merchant_withdrawn(object::id(account), object::id(vault), amount);
 }
 
@@ -235,9 +235,9 @@ public fun claim_yield_partial<T>(
 ) {
     assert!(yield_vault.balance.value() >= amount, EInsufficientVaultBalance);
     let claimed = merchant::debit_accrued_yield_typed<T>(cap, account, amount);
-    let remaining = merchant::get_accrued_yield_typed<T>(account);
+    let remaining = merchant::accrued_yield_typed<T>(account);
     let coin = yield_vault.balance.split(claimed).into_coin(ctx);
-    transfer::public_transfer(coin, merchant::get_owner(account));
+    transfer::public_transfer(coin, merchant::owner(account));
     events::emit_yield_claimed_partial(object::id(account), claimed, remaining);
 }
 
@@ -248,18 +248,18 @@ public fun claim_yield_v2<T>(
     yield_vault: &mut YieldVault<T>,
     ctx: &mut TxContext,
 ) {
-    let amount = merchant::get_accrued_yield_typed<T>(account);
+    let amount = merchant::accrued_yield_typed<T>(account);
     claim_yield_partial<T>(cap, account, yield_vault, amount, ctx);
 }
 
 // ── Getters ──
 
-public fun get_mode(config: &RouterConfig): u8 { config.mode }
+public fun mode(config: &RouterConfig): u8 { config.mode }
 public fun is_fallback(config: &RouterConfig): bool { config.mode == MODE_FALLBACK }
 public fun is_stablelayer(config: &RouterConfig): bool { config.mode == MODE_STABLELAYER }
 
 public fun vault_balance<T>(vault: &Vault<T>): u64 { vault.balance.value() }
-public fun vault_total_deposited<T>(vault: &Vault<T>): u64 { vault.total_deposited }
+public fun vault_total_withdrawn<T>(vault: &Vault<T>): u64 { vault.total_withdrawn }
 public fun vault_total_yield_harvested<T>(vault: &Vault<T>): u64 { vault.total_yield_harvested }
 
 public fun yield_vault_balance<T>(yv: &YieldVault<T>): u64 { yv.balance.value() }

@@ -73,7 +73,7 @@ fun partial_claim_basic() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 40, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 60);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 60);
     assert!(router::yield_vault_balance<USDB>(&yield_vault) == 60);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
@@ -107,7 +107,7 @@ fun partial_claim_all_removes_df() {
         &cap, &mut account, &mut yield_vault, 100, scenario.ctx(),
     );
     // df should be removed → getter returns 0
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     assert!(router::yield_vault_balance<USDB>(&yield_vault) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
@@ -133,7 +133,7 @@ fun v2_wrapper_still_works() {
     router::claim_yield_v2<USDB>(
         &cap, &mut account, &mut yield_vault, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -164,7 +164,7 @@ fun multiple_partial_claims() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 30, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 70);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 70);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -177,7 +177,7 @@ fun multiple_partial_claims() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 30, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 40);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 40);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -190,7 +190,7 @@ fun multiple_partial_claims() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 40, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -304,7 +304,7 @@ fun claim_1_mist() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 1, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 99);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 99);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -356,9 +356,9 @@ fun multi_type_interleave() {
     router::claim_yield_partial<USDB>(
         &cap, &mut account, &mut yield_vault, 40, scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 60);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 60);
     // STABLE untouched
-    assert!(merchant::get_accrued_yield_typed<STABLE>(&account) == 50);
+    assert!(merchant::accrued_yield_typed<STABLE>(&account) == 50);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);

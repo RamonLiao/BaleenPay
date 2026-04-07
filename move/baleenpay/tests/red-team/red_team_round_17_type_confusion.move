@@ -85,15 +85,15 @@ fun red_team_17b_migrate_to_two_types() {
     let admin_cap = scenario.take_from_sender<AdminCap>();
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::admin_migrate_yield<USDB>(&admin_cap, &mut account);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 100);
-    assert!(merchant::get_accrued_yield(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 100);
+    assert!(merchant::accrued_yield(&account) == 0);
 
     // Migrate to FAKE_USDB — struct field is 0, so no df added
     merchant::admin_migrate_yield<FAKE_USDB>(&admin_cap, &mut account);
     // FAKE_USDB should be 0 — NOT duplicated from USDB
-    assert!(merchant::get_accrued_yield_typed<FAKE_USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<FAKE_USDB>(&account) == 0);
     // USDB untouched
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 100);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 100);
 
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);

@@ -60,8 +60,8 @@ fun test_pay_once_routed_mode_stablelayer() {
     );
     // Funds go to vault, not merchant wallet
     assert!(router::vault_balance(&vault) == 500);
-    assert!(merchant::get_idle_principal(&account) == 500);
-    assert!(merchant::get_total_received(&account) == 500);
+    assert!(merchant::idle_principal(&account) == 500);
+    assert!(merchant::total_received(&account) == 500);
     clock::destroy_for_testing(clock);
     test_scenario::return_shared(vault);
     test_scenario::return_shared(account);

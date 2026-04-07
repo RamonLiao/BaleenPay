@@ -43,7 +43,7 @@ fun red_team_round_12a_total_received_overflow() {
     let coin1 = coin::mint_for_testing<TEST_USDC>(half_max_plus_one, scenario.ctx());
     let clock = clock::create_for_testing(scenario.ctx());
     payment::pay_once(&mut account, coin1, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == half_max_plus_one);
+    assert!(merchant::total_received(&account) == half_max_plus_one);
     test_scenario::return_shared(account);
     clock.destroy_for_testing();
 
@@ -84,7 +84,7 @@ fun red_team_round_12b_external_yield_inflates_beyond_principal() {
     let coin = coin::mint_for_testing<TEST_USDC>(1_000_000, scenario.ctx());
     let clock = clock::create_for_testing(scenario.ctx());
     payment::pay_once(&mut account, coin, &clock, scenario.ctx());
-    assert!(merchant::get_idle_principal(&account) == 1_000_000);
+    assert!(merchant::idle_principal(&account) == 1_000_000);
     test_scenario::return_shared(account);
     clock.destroy_for_testing();
 
@@ -98,8 +98,8 @@ fun red_team_round_12b_external_yield_inflates_beyond_principal() {
         &admin_cap, &mut yield_vault, &mut account, yield_coin,
     );
     // accrued_yield = 10M, idle_principal = 1M (unchanged by external yield)
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 10_000_000);
-    assert!(merchant::get_idle_principal(&account) == 1_000_000);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 10_000_000);
+    assert!(merchant::idle_principal(&account) == 1_000_000);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);
@@ -111,8 +111,8 @@ fun red_team_round_12b_external_yield_inflates_beyond_principal() {
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
     // idle_principal still 1M (untouched), accrued_yield = 0
-    assert!(merchant::get_idle_principal(&account) == 1_000_000);
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 1_000_000);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -141,7 +141,7 @@ fun red_team_round_12c_cancel_after_fully_processed() {
     let coin = coin::mint_for_testing<TEST_USDC>(2_000_000, scenario.ctx());
     let mut clock = clock::create_for_testing(scenario.ctx());
     payment::subscribe(&mut account, coin, 1_000_000, 100, 2, &clock, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
 
     // Process remaining period
@@ -150,7 +150,7 @@ fun red_team_round_12c_cancel_after_fully_processed() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(payment::get_sub_balance<TEST_USDC>(&sub) == 0);
+    assert!(payment::sub_balance<TEST_USDC>(&sub) == 0);
     test_scenario::return_shared(account);
     test_scenario::return_shared(sub);
 
@@ -159,7 +159,7 @@ fun red_team_round_12c_cancel_after_fully_processed() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 0);
+    assert!(merchant::active_subscriptions(&account) == 0);
     test_scenario::return_shared(account);
 
     clock.destroy_for_testing();
@@ -169,7 +169,7 @@ fun red_team_round_12c_cancel_after_fully_processed() {
 }
 
 // ── Attack 12d: fund_subscription while merchant is admin-frozen ──
-// fund_subscription checks get_paused (admin OR self). Payer should NOT be
+// fund_subscription checks is_paused (admin OR self). Payer should NOT be
 // able to deposit into a frozen merchant's escrow.
 #[test]
 #[expected_failure] // EPaused
@@ -206,5 +206,5 @@ fun red_team_round_12d_fund_during_admin_freeze() {
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
     scenario.end();
-    // DEFENDED: fund_subscription correctly checks get_paused which includes admin freeze.
+    // DEFENDED: fund_subscription correctly checks is_paused which includes admin freeze.
 }

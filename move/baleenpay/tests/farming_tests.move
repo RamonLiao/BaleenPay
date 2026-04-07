@@ -32,12 +32,12 @@ fun test_move_to_farming() {
     scenario.next_tx(merchant_addr);
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::add_payment_for_testing(&mut account, 1000);
-    assert!(merchant::get_idle_principal(&account) == 1000);
-    assert!(merchant::get_farming_principal(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 1000);
+    assert!(merchant::farming_principal(&account) == 0);
 
     merchant::move_to_farming_for_testing(&mut account, 600);
-    assert!(merchant::get_idle_principal(&account) == 400);
-    assert!(merchant::get_farming_principal(&account) == 600);
+    assert!(merchant::idle_principal(&account) == 400);
+    assert!(merchant::farming_principal(&account) == 600);
 
     test_scenario::return_shared(account);
     scenario.end();
@@ -73,11 +73,11 @@ fun test_return_from_farming() {
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::add_payment_for_testing(&mut account, 1000);
     merchant::move_to_farming_for_testing(&mut account, 800);
-    assert!(merchant::get_farming_principal(&account) == 800);
+    assert!(merchant::farming_principal(&account) == 800);
 
     merchant::return_from_farming_for_testing(&mut account, 300);
-    assert!(merchant::get_farming_principal(&account) == 500);
-    assert!(merchant::get_idle_principal(&account) == 200); // unchanged by return_from_farming
+    assert!(merchant::farming_principal(&account) == 500);
+    assert!(merchant::idle_principal(&account) == 200); // unchanged by return_from_farming
 
     test_scenario::return_shared(account);
     scenario.end();
@@ -146,8 +146,8 @@ fun test_keeper_deposit_to_farm() {
     router::keeper_deposit_to_farm<STABLECOIN>(
         &admin_cap, &mut account, &mut sv, stablecoin,
     );
-    assert!(merchant::get_idle_principal(&account) == 0);
-    assert!(merchant::get_farming_principal(&account) == 1000);
+    assert!(merchant::idle_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 1000);
     assert!(router::stablecoin_vault_balance(&sv) == 1000);
     test_scenario::return_shared(sv);
     test_scenario::return_shared(account);
@@ -194,7 +194,7 @@ fun test_take_stablecoin() {
         &cap, &mut account, &mut sv, 600, scenario.ctx(),
     );
     assert!(coin.value() == 600);
-    assert!(merchant::get_farming_principal(&account) == 400);
+    assert!(merchant::farming_principal(&account) == 400);
     assert!(router::stablecoin_vault_balance(&sv) == 400);
     coin::burn_for_testing(coin);
     test_scenario::return_shared(sv);

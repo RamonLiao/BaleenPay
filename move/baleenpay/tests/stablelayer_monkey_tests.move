@@ -217,7 +217,7 @@ fun test_full_lifecycle() {
         b"lifecycle-001".to_string(), &clock, scenario.ctx(),
     );
     assert!(router::vault_balance(&vault) == 1000);
-    assert!(merchant::get_idle_principal(&account) == 1000);
+    assert!(merchant::idle_principal(&account) == 1000);
     clock::destroy_for_testing(clock);
     test_scenario::return_shared(vault);
     test_scenario::return_shared(account);
@@ -241,7 +241,7 @@ fun test_full_lifecycle() {
     router::keeper_deposit_yield<USDB>(
         &admin_cap, &mut yield_vault, &mut account, usdb,
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 50);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 50);
     assert!(router::yield_vault_balance(&yield_vault) == 50);
     test_scenario::return_shared(account);
     test_scenario::return_shared(yield_vault);
@@ -253,7 +253,7 @@ fun test_full_lifecycle() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut yield_vault = scenario.take_shared<YieldVault<USDB>>();
     router::claim_yield_v2<USDB>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     assert!(router::yield_vault_balance(&yield_vault) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);

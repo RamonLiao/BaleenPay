@@ -47,7 +47,7 @@ async function main() {
   check('exists', !!vFields)
   const vaultBalance = BigInt(String(vFields?.balance ?? 0))
   check('balance > 0 (routed payment landed)', vaultBalance > 0n, `got ${vaultBalance}`)
-  console.log(`  -> balance: ${vaultBalance}, total_deposited: ${vFields?.total_deposited}`)
+  console.log(`  -> balance: ${vaultBalance}, total_withdrawn: ${vFields?.total_withdrawn}`)
 
   // 4. YieldVault<USDB>
   console.log('\n--- YieldVault<USDB> ---')

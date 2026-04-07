@@ -66,7 +66,7 @@ fun test_attack_instant_deposit_and_redeem() {
     // This succeeds — no cooldown exists. This is a design decision, not a bug,
     // because the merchant owns the funds. But it does mean flash-redeem is possible.
     assert!(coin.value() == 1000);
-    assert!(merchant::get_farming_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 0);
     coin::burn_for_testing(coin);
     test_scenario::return_shared(sv);
     test_scenario::return_shared(account);
@@ -111,8 +111,8 @@ fun test_attack_withdraw_plus_redeem_full_drain() {
     let mut sv = scenario.take_shared<StablecoinVault<STABLECOIN>>();
     let coin = coin::mint_for_testing<STABLECOIN>(500, scenario.ctx());
     router::keeper_deposit_to_farm(&admin_cap, &mut account, &mut sv, coin);
-    assert!(merchant::get_idle_principal(&account) == 500);
-    assert!(merchant::get_farming_principal(&account) == 500);
+    assert!(merchant::idle_principal(&account) == 500);
+    assert!(merchant::farming_principal(&account) == 500);
     test_scenario::return_shared(sv);
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);
@@ -123,7 +123,7 @@ fun test_attack_withdraw_plus_redeem_full_drain() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut vault = scenario.take_shared<Vault<USDC>>();
     router::merchant_withdraw(&cap, &mut account, &mut vault, 500, scenario.ctx());
-    assert!(merchant::get_idle_principal(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 0);
     test_scenario::return_shared(vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -135,8 +135,8 @@ fun test_attack_withdraw_plus_redeem_full_drain() {
     let mut sv = scenario.take_shared<StablecoinVault<STABLECOIN>>();
     let coin = router::take_stablecoin(&cap, &mut account, &mut sv, 500, scenario.ctx());
     assert!(coin.value() == 500);
-    assert!(merchant::get_farming_principal(&account) == 0);
-    assert!(merchant::get_idle_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 0);
     coin::burn_for_testing(coin);
     test_scenario::return_shared(sv);
     test_scenario::return_shared(account);

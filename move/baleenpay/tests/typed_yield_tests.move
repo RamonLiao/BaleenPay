@@ -35,8 +35,8 @@ fun test_multi_type_yield_isolation() {
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::credit_external_yield_typed_for_testing<USDB>(&mut account, 100);
     merchant::credit_external_yield_typed_for_testing<REWARD_A>(&mut account, 200);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 100);
-    assert!(merchant::get_accrued_yield_typed<REWARD_A>(&account) == 200);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 100);
+    assert!(merchant::accrued_yield_typed<REWARD_A>(&account) == 200);
     test_scenario::return_shared(account);
 
     // Create YieldVault<USDB> + seed
@@ -59,8 +59,8 @@ fun test_multi_type_yield_isolation() {
     router::claim_yield_v2<USDB>(&cap, &mut account, &mut yield_vault, scenario.ctx());
 
     // USDB yield gone, REWARD_A untouched
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
-    assert!(merchant::get_accrued_yield_typed<REWARD_A>(&account) == 200);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<REWARD_A>(&account) == 200);
 
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
@@ -80,8 +80,8 @@ fun test_admin_migrate_yield() {
     scenario.next_tx(admin);
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::credit_external_yield_for_testing(&mut account, 50);
-    assert!(merchant::get_accrued_yield(&account) == 50);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield(&account) == 50);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     test_scenario::return_shared(account);
 
     // Admin migrates
@@ -91,8 +91,8 @@ fun test_admin_migrate_yield() {
     merchant::admin_migrate_yield<USDB>(&admin_cap, &mut account);
 
     // Struct field = 0, df = 50
-    assert!(merchant::get_accrued_yield(&account) == 0);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 50);
+    assert!(merchant::accrued_yield(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 50);
 
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);
@@ -144,16 +144,16 @@ fun test_admin_set_yield() {
     let admin_cap = scenario.take_from_sender<AdminCap>();
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::admin_set_yield<USDB>(&admin_cap, &mut account, 100);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 100);
-    assert!(merchant::get_accrued_yield(&account) == 0); // struct field zeroed
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 100);
+    assert!(merchant::accrued_yield(&account) == 0); // struct field zeroed
 
     // Set yield to 0 — df removed
     merchant::admin_set_yield<USDB>(&admin_cap, &mut account, 0);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
 
     // Set yield again — df re-created
     merchant::admin_set_yield<USDB>(&admin_cap, &mut account, 42);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 42);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 42);
 
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);

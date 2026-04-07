@@ -67,13 +67,13 @@ fun test_attack_multi_deposit_then_full_drain() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut sv = scenario.take_shared<StablecoinVault<STABLECOIN>>();
 
-    assert!(merchant::get_farming_principal(&account) == 3000);
+    assert!(merchant::farming_principal(&account) == 3000);
     assert!(router::stablecoin_vault_balance(&sv) == 3000);
 
     // Redeem ALL — should succeed and leave both at 0
     let coin = router::take_stablecoin(&cap, &mut account, &mut sv, 3000, scenario.ctx());
     assert!(coin.value() == 3000);
-    assert!(merchant::get_farming_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 0);
     assert!(router::stablecoin_vault_balance(&sv) == 0);
 
     coin::burn_for_testing(coin);

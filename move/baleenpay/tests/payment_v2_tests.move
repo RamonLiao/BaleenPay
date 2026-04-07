@@ -41,7 +41,7 @@ fun test_pay_once_v2_success() {
         scenario.ctx(),
     );
 
-    assert!(merchant::get_total_received(&account) == 100_000_000);
+    assert!(merchant::total_received(&account) == 100_000_000);
     assert!(payment::has_order_record(&account, payer, string::utf8(b"order_001")));
 
     test_scenario::return_shared(account);
@@ -100,7 +100,7 @@ fun test_pay_once_v2_different_payers_same_order_ok() {
     let coin2 = coin::mint_for_testing<TEST_USDC>(200_000_000, scenario.ctx());
     payment::pay_once_v2(&mut account, coin2, string::utf8(b"order_shared"), &clock, scenario.ctx());
 
-    assert!(merchant::get_total_received(&account) == 300_000_000);
+    assert!(merchant::total_received(&account) == 300_000_000);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -169,7 +169,7 @@ fun test_subscribe_v2_success() {
         scenario.ctx(),
     );
 
-    assert!(merchant::get_total_received(&account) == 100_000_000);
+    assert!(merchant::total_received(&account) == 100_000_000);
     assert!(payment::has_order_record(&account, payer, string::utf8(b"sub_001")));
 
     test_scenario::return_shared(account);
@@ -236,7 +236,7 @@ fun test_remove_order_record_and_repay() {
     let clock = clock::create_for_testing(scenario.ctx());
     let coin2 = coin::mint_for_testing<TEST_USDC>(200, scenario.ctx());
     payment::pay_once_v2(&mut account, coin2, string::utf8(b"order_rm"), &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 300);
+    assert!(merchant::total_received(&account) == 300);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -341,10 +341,10 @@ fun test_self_pause_and_unpause() {
     let cap = scenario.take_from_sender<merchant::MerchantCap>();
 
     merchant::self_pause(&cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
 
     merchant::self_unpause(&cap, &mut account);
-    assert!(merchant::get_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == false);
 
     scenario.return_to_sender(cap);
     test_scenario::return_shared(account);

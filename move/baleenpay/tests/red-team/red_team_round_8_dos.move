@@ -52,7 +52,7 @@ fun red_team_round_8a_storage_bloat_dynamic_fields() {
     // Verify all 20 records exist
     scenario.next_tx(attacker);
     let account = scenario.take_shared<MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 20);
+    assert!(merchant::total_received(&account) == 20);
     assert!(payment::has_order_record(&account, attacker, b"SPAM-00".to_string()));
     assert!(payment::has_order_record(&account, attacker, b"SPAM-19".to_string()));
     test_scenario::return_shared(account);
@@ -97,7 +97,7 @@ fun red_team_round_8b_subscription_count_consistency() {
 
     scenario.next_tx(payer);
     let account = scenario.take_shared<MerchantAccount>();
-    assert!(merchant::get_active_subscriptions(&account) == 3);
+    assert!(merchant::active_subscriptions(&account) == 3);
     test_scenario::return_shared(account);
 
     // Cancel 1 subscription
@@ -105,7 +105,7 @@ fun red_team_round_8b_subscription_count_consistency() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 2);
+    assert!(merchant::active_subscriptions(&account) == 2);
     test_scenario::return_shared(account);
 
     scenario.end();
@@ -135,7 +135,7 @@ fun red_team_round_8c_decrement_below_zero() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 0);
+    assert!(merchant::active_subscriptions(&account) == 0);
     // Manually try to decrement again (package-internal, but test_only can access)
     merchant::decrement_subscriptions(&mut account); // Should abort
     test_scenario::return_shared(account);

@@ -34,7 +34,7 @@ fun red_team_round_9a_rapid_subscribe_cancel_grief() {
     let coin = coin::mint_for_testing<TEST_USDC>(1_000_000, scenario.ctx());
     let clock = clock::create_for_testing(scenario.ctx());
     payment::subscribe(&mut account, coin, 1_000_000, 86400_000, 1, &clock, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
     clock.destroy_for_testing();
 
@@ -43,11 +43,11 @@ fun red_team_round_9a_rapid_subscribe_cancel_grief() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     // Balance should be 0 after first period auto-paid
-    assert!(payment::get_sub_balance<TEST_USDC>(&sub) == 0);
+    assert!(payment::sub_balance<TEST_USDC>(&sub) == 0);
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 0);
+    assert!(merchant::active_subscriptions(&account) == 0);
     // Merchant still received the 1M payment
-    assert!(merchant::get_total_received(&account) == 1_000_000);
+    assert!(merchant::total_received(&account) == 1_000_000);
     test_scenario::return_shared(account);
 
     scenario.end();
@@ -73,7 +73,7 @@ fun red_team_round_9b_remove_and_replay_ledger_tracking() {
     let coin1 = coin::mint_for_testing<TEST_USDC>(5_000_000, scenario.ctx());
     let clock = clock::create_for_testing(scenario.ctx());
     payment::pay_once_v2(&mut account, coin1, b"INVOICE-42".to_string(), &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 5_000_000);
+    assert!(merchant::total_received(&account) == 5_000_000);
     test_scenario::return_shared(account);
     clock.destroy_for_testing();
 
@@ -92,7 +92,7 @@ fun red_team_round_9b_remove_and_replay_ledger_tracking() {
     let clock2 = clock::create_for_testing(scenario.ctx());
     payment::pay_once_v2(&mut account, coin2, b"INVOICE-42".to_string(), &clock2, scenario.ctx());
     // Merchant now has 10M total, payer paid twice for same invoice
-    assert!(merchant::get_total_received(&account) == 10_000_000);
+    assert!(merchant::total_received(&account) == 10_000_000);
     test_scenario::return_shared(account);
     clock2.destroy_for_testing();
 

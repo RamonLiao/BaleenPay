@@ -38,11 +38,11 @@ fun red_team_19a_migrate_zero_then_set() {
 
     // Migrate with 0 — should NOT create df (amount == 0 → skip add)
     merchant::admin_migrate_yield<USDB>(&admin_cap, &mut account);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
 
     // admin_set_yield should still work — creates df from scratch
     merchant::admin_set_yield<USDB>(&admin_cap, &mut account, 50);
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 50);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 50);
 
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);

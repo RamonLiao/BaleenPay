@@ -67,12 +67,12 @@ fun red_team_round_11a_yield_vault_desync_claim() {
     // No fund loss, but availability issue -- merchant cannot claim partial yield.
 }
 
-// ── Attack 11b: keeper_withdraw total_deposited overflow ──
-// total_deposited += amount on each withdraw. If keeper withdraws enough times,
-// total_deposited could overflow (though practically unlikely).
+// ── Attack 11b: keeper_withdraw total_withdrawn overflow ──
+// total_withdrawn += amount on each withdraw. If keeper withdraws enough times,
+// total_withdrawn could overflow (though practically unlikely).
 #[test]
 #[expected_failure]
-fun red_team_round_11b_keeper_total_deposited_overflow() {
+fun red_team_round_11b_keeper_total_withdrawn_overflow() {
     let admin = @0xAD;
     let merchant_addr = @0xBB;
     let mut scenario = test_scenario::begin(admin);
@@ -85,7 +85,7 @@ fun red_team_round_11b_keeper_total_deposited_overflow() {
     router::deposit_to_vault_for_testing(&mut vault, big_coin);
     test_scenario::return_shared(vault);
 
-    // First withdraw: total_deposited = MAX_U64
+    // First withdraw: total_withdrawn = MAX_U64
     scenario.next_tx(admin);
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     let mut vault = scenario.take_shared<Vault<TEST_USDC>>();
@@ -105,7 +105,7 @@ fun red_team_round_11b_keeper_total_deposited_overflow() {
     router::deposit_to_vault_for_testing(&mut vault, coin2);
     test_scenario::return_shared(vault);
 
-    // Second withdraw: total_deposited = MAX_U64 + 1 → overflow
+    // Second withdraw: total_withdrawn = MAX_U64 + 1 → overflow
     scenario.next_tx(admin);
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     let mut vault = scenario.take_shared<Vault<TEST_USDC>>();
@@ -118,9 +118,9 @@ fun red_team_round_11b_keeper_total_deposited_overflow() {
     scenario.return_to_sender(admin_cap);
     clock2.destroy_for_testing();
     scenario.end();
-    // FINDING: total_deposited overflows silently in Move 2024 (wrapping or abort depending on mode).
+    // FINDING: total_withdrawn overflows silently in Move 2024 (wrapping or abort depending on mode).
     // This is a SUSPICIOUS finding -- the counter becomes meaningless after overflow.
-    // No fund loss but total_deposited tracking becomes incorrect.
+    // No fund loss but total_withdrawn tracking becomes incorrect.
 }
 
 // ── Attack 11c: keeper_withdraw more than what was deposited via payments ──
@@ -163,8 +163,8 @@ fun red_team_round_11c_keeper_withdraw_exceeds_payment_deposits() {
     assert!(withdrawn.value() == 1_000_000);
     // Vault now empty
     assert!(router::vault_balance<TEST_USDC>(&vault) == 0);
-    // total_deposited = 1M (tracks keeper withdrawals, not payment deposits)
-    assert!(router::vault_total_deposited<TEST_USDC>(&vault) == 1_000_000);
+    // total_withdrawn = 1M (tracks keeper withdrawals, not payment deposits)
+    assert!(router::vault_total_withdrawn<TEST_USDC>(&vault) == 1_000_000);
     transfer::public_transfer(withdrawn, admin);
     test_scenario::return_shared(vault);
     scenario.return_to_sender(admin_cap);
@@ -172,7 +172,7 @@ fun red_team_round_11c_keeper_withdraw_exceeds_payment_deposits() {
 
     scenario.end();
     // DEFENDED: keeper can only withdraw up to vault.balance (enforced by balance::split).
-    // total_deposited naming is confusing -- it tracks "total withdrawn by keeper", not deposits.
+    // total_withdrawn naming is confusing -- it tracks "total withdrawn by keeper", not deposits.
 }
 
 // ── Attack 11d: Rapid process_subscription -- process multiple periods in one epoch ──
@@ -192,7 +192,7 @@ fun red_team_round_11d_multi_period_rapid_process() {
     let mut clock = clock::create_for_testing(scenario.ctx());
     payment::subscribe(&mut account, coin, 1_000_000, 100, 5, &clock, scenario.ctx());
     // First period auto-paid, 4 remaining in escrow
-    assert!(merchant::get_total_received(&account) == 1_000_000);
+    assert!(merchant::total_received(&account) == 1_000_000);
     test_scenario::return_shared(account);
 
     // Advance clock by 500ms (past 4 remaining due dates)
@@ -213,13 +213,13 @@ fun red_team_round_11d_multi_period_rapid_process() {
     // Verify all 5 periods processed
     scenario.next_tx(merchant_addr);
     let account = scenario.take_shared<MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 5_000_000);
+    assert!(merchant::total_received(&account) == 5_000_000);
     test_scenario::return_shared(account);
 
     // Sub should be empty now
     scenario.next_tx(payer);
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
-    assert!(payment::get_sub_balance<TEST_USDC>(&sub) == 0);
+    assert!(payment::sub_balance<TEST_USDC>(&sub) == 0);
     test_scenario::return_shared(sub);
 
     clock.destroy_for_testing();
@@ -254,7 +254,7 @@ fun red_team_round_11e_external_yield_requires_real_coins() {
         &admin_cap, &mut yield_vault, &mut account, yield_coin,
     );
     // Yield credited AND coins deposited
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 2_000_000);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 2_000_000);
     assert!(router::yield_vault_balance<TEST_USDC>(&yield_vault) == 2_000_000);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
@@ -266,7 +266,7 @@ fun red_team_round_11e_external_yield_requires_real_coins() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
     assert!(router::yield_vault_balance<TEST_USDC>(&yield_vault) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);

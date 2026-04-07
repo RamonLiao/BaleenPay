@@ -80,7 +80,7 @@ fun red_team_round_6b_cancel_before_due_refunds_all_remaining() {
     scenario.next_tx(payer);
     let mut account = scenario.take_shared<MerchantAccount>();
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
-    assert!(payment::get_sub_balance<TEST_USDC>(&sub) == 2_000_000);
+    assert!(payment::sub_balance<TEST_USDC>(&sub) == 2_000_000);
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
     test_scenario::return_shared(account);
 

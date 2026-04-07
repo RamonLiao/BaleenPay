@@ -52,7 +52,7 @@ fun test_merchant_withdraw_success() {
     router::merchant_withdraw<USDC>(
         &cap, &mut account, &mut vault, 400, scenario.ctx(),
     );
-    assert!(merchant::get_idle_principal(&account) == 600);
+    assert!(merchant::idle_principal(&account) == 600);
     assert!(router::vault_balance(&vault) == 600);
     test_scenario::return_shared(vault);
     test_scenario::return_shared(account);

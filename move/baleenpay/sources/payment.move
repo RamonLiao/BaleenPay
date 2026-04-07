@@ -93,7 +93,7 @@ public fun pay_once<T>(
     clock: &Clock,
     ctx: &TxContext,
 ) {
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     let amount = coin.value();
     assert!(amount > 0, EZeroAmount);
 
@@ -101,7 +101,7 @@ public fun pay_once<T>(
     merchant::add_payment(account, amount);
 
     // Transfer coin to merchant owner
-    transfer::public_transfer(coin, merchant::get_owner(account));
+    transfer::public_transfer(coin, merchant::owner(account));
 
     // Emit event (payment_type 0 = one-time)
     events::emit_payment_received(
@@ -126,12 +126,12 @@ public fun pay_once_v2<T>(
     let key = OrderKey { payer: ctx.sender(), order_id };
     assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
 
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     let amount = coin.value();
     assert!(amount > 0, EZeroAmount);
 
     merchant::add_payment(account, amount);
-    transfer::public_transfer(coin, merchant::get_owner(account));
+    transfer::public_transfer(coin, merchant::owner(account));
 
     let now = clock.timestamp_ms();
     let coin_type = type_name::with_defining_ids<T>().into_string().to_string();
@@ -166,7 +166,7 @@ public fun pay_once_routed<T>(
     validate_order_id(&order_id);
     let key = OrderKey { payer: ctx.sender(), order_id };
     assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
 
     let amount = coin.value();
     assert!(amount > 0, EZeroAmount);
@@ -209,7 +209,7 @@ public fun subscribe<T>(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     assert!(amount_per_period > 0, EZeroAmount);
     assert!(period_ms > 0, EZeroPeriod);
     assert!(prepaid_periods > 0, EZeroPrepaidPeriods);
@@ -234,7 +234,7 @@ public fun subscribe<T>(
 
     // Process first period immediately
     let first_payment = escrow_balance.split(amount_per_period);
-    transfer::public_transfer(first_payment.into_coin(ctx), merchant::get_owner(account));
+    transfer::public_transfer(first_payment.into_coin(ctx), merchant::owner(account));
     merchant::add_payment(account, amount_per_period);
 
     let now = clock.timestamp_ms();
@@ -290,7 +290,7 @@ public fun subscribe_v2<T>(
     let key = OrderKey { payer: ctx.sender(), order_id };
     assert!(!df::exists_(merchant::uid(account), key), EOrderAlreadyPaid);
 
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     assert!(amount_per_period > 0, EZeroAmount);
     assert!(period_ms > 0, EZeroPeriod);
     assert!(prepaid_periods > 0, EZeroPrepaidPeriods);
@@ -310,7 +310,7 @@ public fun subscribe_v2<T>(
 
     let mut escrow_balance = escrow_coin.into_balance();
     let first_payment = escrow_balance.split(amount_per_period);
-    transfer::public_transfer(first_payment.into_coin(ctx), merchant::get_owner(account));
+    transfer::public_transfer(first_payment.into_coin(ctx), merchant::owner(account));
     merchant::add_payment(account, amount_per_period);
 
     let now = clock.timestamp_ms();
@@ -358,7 +358,7 @@ public fun process_subscription<T>(
     ctx: &mut TxContext,
 ) {
     assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     assert!(clock.timestamp_ms() >= subscription.next_due, ENotDue);
     assert!(
         subscription.balance.value() >= subscription.amount_per_period,
@@ -366,7 +366,7 @@ public fun process_subscription<T>(
     );
 
     let payment = subscription.balance.split(subscription.amount_per_period);
-    transfer::public_transfer(payment.into_coin(ctx), merchant::get_owner(account));
+    transfer::public_transfer(payment.into_coin(ctx), merchant::owner(account));
 
     merchant::add_payment(account, subscription.amount_per_period);
 
@@ -389,7 +389,7 @@ public fun cancel_subscription<T>(
     subscription: Subscription<T>,
     ctx: &mut TxContext,
 ) {
-    assert!(!merchant::get_admin_paused(account), EAdminFrozen);
+    assert!(!merchant::is_admin_paused(account), EAdminFrozen);
     assert!(ctx.sender() == subscription.payer, ENotPayer);
     assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
 
@@ -432,7 +432,7 @@ public fun fund_subscription<T>(
     ctx: &TxContext,
 ) {
     assert!(subscription.merchant_id == object::id(account), EMerchantMismatch);
-    assert!(!merchant::get_paused(account), EPaused);
+    assert!(!merchant::is_paused(account), EPaused);
     assert!(ctx.sender() == subscription.payer, ENotPayer);
     let funded_amount = coin.value();
     assert!(funded_amount > 0, EZeroAmount);
@@ -457,8 +457,8 @@ public fun remove_order_record(
     payer: address,
     order_id: String,
 ) {
-    assert!(!merchant::get_admin_paused(account), EAdminFrozen);
-    assert!(merchant::get_merchant_id(cap) == object::id(account), ENotMerchantOwner);
+    assert!(!merchant::is_admin_paused(account), EAdminFrozen);
+    assert!(merchant::merchant_id(cap) == object::id(account), ENotMerchantOwner);
     let key = OrderKey { payer, order_id };
     let _: OrderRecord = df::remove(merchant::uid_mut(account), key);
 
@@ -481,8 +481,8 @@ public fun has_order_record(
 
 // ── Getters (for tests) ──
 
-public fun get_sub_balance<T>(sub: &Subscription<T>): u64 { sub.balance.value() }
-public fun get_sub_next_due<T>(sub: &Subscription<T>): u64 { sub.next_due }
-public fun get_sub_payer<T>(sub: &Subscription<T>): address { sub.payer }
-public fun get_sub_merchant_id<T>(sub: &Subscription<T>): ID { sub.merchant_id }
-public fun get_sub_amount_per_period<T>(sub: &Subscription<T>): u64 { sub.amount_per_period }
+public fun sub_balance<T>(sub: &Subscription<T>): u64 { sub.balance.value() }
+public fun sub_next_due<T>(sub: &Subscription<T>): u64 { sub.next_due }
+public fun sub_payer<T>(sub: &Subscription<T>): address { sub.payer }
+public fun sub_merchant_id<T>(sub: &Subscription<T>): ID { sub.merchant_id }
+public fun sub_amount_per_period<T>(sub: &Subscription<T>): u64 { sub.amount_per_period }

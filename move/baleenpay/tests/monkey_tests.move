@@ -90,8 +90,8 @@ fun test_pay_once_max_u64_amount() {
     let clock = clock::create_for_testing(scenario.ctx());
 
     payment::pay_once(&mut account, max_coin, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 18_446_744_073_709_551_615);
-    assert!(merchant::get_idle_principal(&account) == 18_446_744_073_709_551_615);
+    assert!(merchant::total_received(&account) == 18_446_744_073_709_551_615);
+    assert!(merchant::idle_principal(&account) == 18_446_744_073_709_551_615);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -196,7 +196,7 @@ fun test_subscribe_min_period_rapid_process() {
         &clock, scenario.ctx(),
     );
     // First period processed: total=1, escrow=4
-    assert!(merchant::get_total_received(&account) == 1);
+    assert!(merchant::total_received(&account) == 1);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -220,9 +220,9 @@ fun test_subscribe_min_period_rapid_process() {
     // Verify all 5 periods processed
     scenario.next_tx(payer);
     let account = scenario.take_shared<merchant::MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 5);
+    assert!(merchant::total_received(&account) == 5);
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
-    assert!(payment::get_sub_balance(&sub) == 0);
+    assert!(payment::sub_balance(&sub) == 0);
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
 
@@ -422,7 +422,7 @@ fun test_pay_once_minimum_amount() {
     let clock = clock::create_for_testing(scenario.ctx());
 
     payment::pay_once(&mut account, tiny, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 1);
+    assert!(merchant::total_received(&account) == 1);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -464,7 +464,7 @@ fun test_double_claim_yield_fails() {
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
 
     // Second claim → zero yield → abort
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
@@ -506,8 +506,8 @@ fun test_stress_many_payments() {
     // Verify final state
     scenario.next_tx(admin);
     let account = scenario.take_shared<merchant::MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == payment_amount * num_payments);
-    assert!(merchant::get_idle_principal(&account) == payment_amount * num_payments);
+    assert!(merchant::total_received(&account) == payment_amount * num_payments);
+    assert!(merchant::idle_principal(&account) == payment_amount * num_payments);
     test_scenario::return_shared(account);
 
     scenario.end();
@@ -548,10 +548,10 @@ fun test_process_at_exact_boundary() {
     clock::set_for_testing(&mut clock, 150); // exact boundary
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 20);
-    assert!(payment::get_sub_balance(&sub) == 0);
+    assert!(merchant::total_received(&account) == 20);
+    assert!(payment::sub_balance(&sub) == 0);
     // next_due advanced to 200
-    assert!(payment::get_sub_next_due(&sub) == 200);
+    assert!(payment::sub_next_due(&sub) == 200);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -596,13 +596,13 @@ fun test_process_subscription_late() {
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
     // next_due = 100 + 100 = 200 (not jumped to 999999)
-    assert!(payment::get_sub_next_due(&sub) == 200);
+    assert!(payment::sub_next_due(&sub) == 200);
 
     // Can immediately process again because 999999 >= 200
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(payment::get_sub_next_due(&sub) == 300);
-    assert!(payment::get_sub_balance(&sub) == 0);
-    assert!(merchant::get_total_received(&account) == 30);
+    assert!(payment::sub_next_due(&sub) == 300);
+    assert!(payment::sub_balance(&sub) == 0);
+    assert!(merchant::total_received(&account) == 30);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);

@@ -38,8 +38,8 @@ fun test_pay_once_success() {
     payment::pay_once(&mut account, payment_coin, &clock, scenario.ctx());
 
     // verify ledger updated
-    assert!(merchant::get_total_received(&account) == 100_000_000);
-    assert!(merchant::get_idle_principal(&account) == 100_000_000);
+    assert!(merchant::total_received(&account) == 100_000_000);
+    assert!(merchant::idle_principal(&account) == 100_000_000);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -80,8 +80,8 @@ fun test_pay_once_multiple_payments_accumulate() {
     payment::pay_once(&mut account, coin2, &clock, scenario.ctx());
 
     // verify accumulated totals
-    assert!(merchant::get_total_received(&account) == 125_000_000);
-    assert!(merchant::get_idle_principal(&account) == 125_000_000);
+    assert!(merchant::total_received(&account) == 125_000_000);
+    assert!(merchant::idle_principal(&account) == 125_000_000);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -169,9 +169,9 @@ fun test_subscribe_success() {
     );
 
     // First period processed immediately → ledger has 10 USDC
-    assert!(merchant::get_total_received(&account) == 10_000_000);
-    assert!(merchant::get_idle_principal(&account) == 10_000_000);
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::total_received(&account) == 10_000_000);
+    assert!(merchant::idle_principal(&account) == 10_000_000);
+    assert!(merchant::active_subscriptions(&account) == 1);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -191,10 +191,10 @@ fun test_subscribe_success() {
     // Verify subscription object state
     scenario.next_tx(payer);
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
-    assert!(payment::get_sub_balance(&sub) == 20_000_000); // 2 remaining periods
-    assert!(payment::get_sub_next_due(&sub) == 1000 + 86400_000);
-    assert!(payment::get_sub_payer(&sub) == payer);
-    assert!(payment::get_sub_amount_per_period(&sub) == 10_000_000);
+    assert!(payment::sub_balance(&sub) == 20_000_000); // 2 remaining periods
+    assert!(payment::sub_next_due(&sub) == 1000 + 86400_000);
+    assert!(payment::sub_payer(&sub) == payer);
+    assert!(payment::sub_amount_per_period(&sub) == 10_000_000);
     test_scenario::return_shared(sub);
 
     scenario.end();
@@ -221,14 +221,14 @@ fun test_subscribe_exact_amount_no_refund() {
         &clock, scenario.ctx(),
     );
 
-    assert!(merchant::get_total_received(&account) == 5_000_000);
+    assert!(merchant::total_received(&account) == 5_000_000);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
     // No refund coin should exist for payer
     scenario.next_tx(payer);
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
-    assert!(payment::get_sub_balance(&sub) == 5_000_000); // 1 remaining
+    assert!(payment::sub_balance(&sub) == 5_000_000); // 1 remaining
     test_scenario::return_shared(sub);
 
     scenario.end();
@@ -268,9 +268,9 @@ fun test_process_subscription_when_due() {
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
 
     // Ledger: 10 (subscribe) + 10 (process) = 20
-    assert!(merchant::get_total_received(&account) == 20_000_000);
-    assert!(payment::get_sub_balance(&sub) == 10_000_000); // 1 period left
-    assert!(payment::get_sub_next_due(&sub) == 1000 + 86400_000 * 2);
+    assert!(merchant::total_received(&account) == 20_000_000);
+    assert!(payment::sub_balance(&sub) == 10_000_000); // 1 period left
+    assert!(payment::sub_next_due(&sub) == 1000 + 86400_000 * 2);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -336,7 +336,7 @@ fun test_cancel_subscription_refund() {
         10_000_000, 86400_000, 3,
         &clock, scenario.ctx(),
     );
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -347,7 +347,7 @@ fun test_cancel_subscription_refund() {
 
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
 
-    assert!(merchant::get_active_subscriptions(&account) == 0);
+    assert!(merchant::active_subscriptions(&account) == 0);
     test_scenario::return_shared(account);
 
     // Verify refund coin
@@ -426,7 +426,7 @@ fun test_fund_subscription() {
     test_scenario::return_shared(account);
 
     // Balance: 10 (1 remaining from subscribe) + 30 = 40
-    assert!(payment::get_sub_balance(&sub) == 40_000_000);
+    assert!(payment::sub_balance(&sub) == 40_000_000);
     test_scenario::return_shared(sub);
 
     scenario.end();

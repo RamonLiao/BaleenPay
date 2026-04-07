@@ -51,13 +51,13 @@ fun test_full_lifecycle_pay_yield_claim() {
     let clock = clock::create_for_testing(scenario.ctx());
     payment::pay_once(&mut account, coin, &clock, scenario.ctx());
 
-    assert!(merchant::get_total_received(&account) == 200_000_000);
-    assert!(merchant::get_idle_principal(&account) == 200_000_000);
-    assert!(merchant::get_accrued_yield(&account) == 0);
+    assert!(merchant::total_received(&account) == 200_000_000);
+    assert!(merchant::idle_principal(&account) == 200_000_000);
+    assert!(merchant::accrued_yield(&account) == 0);
 
     // ─ Step 2: Simulate external yield (10 USDC) + fund YieldVault ─
     merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 10_000_000);
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 10_000_000);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 10_000_000);
 
     test_scenario::return_shared(account);
 
@@ -74,9 +74,9 @@ fun test_full_lifecycle_pay_yield_claim() {
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
     // total_received unchanged by yield ops
-    assert!(merchant::get_total_received(&account) == 200_000_000);
+    assert!(merchant::total_received(&account) == 200_000_000);
 
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
@@ -111,8 +111,8 @@ fun test_subscribe_process_all_then_cancel() {
         &clock, scenario.ctx(),
     );
     // First period processed: total=10, subs=1, escrow=20
-    assert!(merchant::get_total_received(&account) == 10_000_000);
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::total_received(&account) == 10_000_000);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -124,8 +124,8 @@ fun test_subscribe_process_all_then_cancel() {
     clock::set_for_testing(&mut clock, 1000 + 86400_000);
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 20_000_000);
-    assert!(payment::get_sub_balance(&sub) == 10_000_000);
+    assert!(merchant::total_received(&account) == 20_000_000);
+    assert!(payment::sub_balance(&sub) == 10_000_000);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -139,8 +139,8 @@ fun test_subscribe_process_all_then_cancel() {
     clock::set_for_testing(&mut clock, 1000 + 86400_000 * 2);
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 30_000_000);
-    assert!(payment::get_sub_balance(&sub) == 0); // fully drained
+    assert!(merchant::total_received(&account) == 30_000_000);
+    assert!(payment::sub_balance(&sub) == 0); // fully drained
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -152,8 +152,8 @@ fun test_subscribe_process_all_then_cancel() {
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
 
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 0);
-    assert!(merchant::get_idle_principal(&account) == 30_000_000);
+    assert!(merchant::active_subscriptions(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 30_000_000);
 
     test_scenario::return_shared(account);
     scenario.end();
@@ -195,7 +195,7 @@ fun test_subscribe_fund_process_cancel_lifecycle() {
     payment::fund_subscription(&account, &mut sub, extra, scenario.ctx());
     test_scenario::return_shared(account);
     // Balance: 10 (1 remaining) + 30 = 40
-    assert!(payment::get_sub_balance(&sub) == 40_000_000);
+    assert!(payment::sub_balance(&sub) == 40_000_000);
     test_scenario::return_shared(sub);
 
     // ─ Process period 2 ─
@@ -206,8 +206,8 @@ fun test_subscribe_fund_process_cancel_lifecycle() {
     clock::set_for_testing(&mut clock, 1000 + 86400_000);
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(payment::get_sub_balance(&sub) == 30_000_000);
-    assert!(merchant::get_total_received(&account) == 20_000_000);
+    assert!(payment::sub_balance(&sub) == 30_000_000);
+    assert!(merchant::total_received(&account) == 20_000_000);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -219,7 +219,7 @@ fun test_subscribe_fund_process_cancel_lifecycle() {
     let sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
 
     payment::cancel_subscription(&mut account, sub, scenario.ctx());
-    assert!(merchant::get_active_subscriptions(&account) == 0);
+    assert!(merchant::active_subscriptions(&account) == 0);
     test_scenario::return_shared(account);
 
     // Verify refund
@@ -317,7 +317,7 @@ fun test_unpause_then_process_succeeds() {
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::pause_merchant(&admin_cap, &mut account);
     merchant::unpause_merchant(&admin_cap, &mut account);
-    assert!(!merchant::get_paused(&account));
+    assert!(!merchant::is_paused(&account));
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);
 
@@ -329,7 +329,7 @@ fun test_unpause_then_process_succeeds() {
     clock::set_for_testing(&mut clock, 1000 + 86400_000);
 
     payment::process_subscription(&mut account, &mut sub, &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 20_000_000);
+    assert!(merchant::total_received(&account) == 20_000_000);
 
     test_scenario::return_shared(sub);
     test_scenario::return_shared(account);
@@ -386,9 +386,9 @@ fun test_multiple_payers_same_merchant() {
     // Verify accumulated totals: 100 + 50 (first period) + 25 = 175
     scenario.next_tx(admin);
     let account = scenario.take_shared<merchant::MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 175_000_000);
-    assert!(merchant::get_idle_principal(&account) == 175_000_000);
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::total_received(&account) == 175_000_000);
+    assert!(merchant::idle_principal(&account) == 175_000_000);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
 
     scenario.end();
@@ -417,7 +417,7 @@ fun test_multiple_subscriptions_same_merchant() {
         &mut account, c1, 10_000_000, 86400_000, 2,
         &clock, scenario.ctx(),
     );
-    assert!(merchant::get_active_subscriptions(&account) == 1);
+    assert!(merchant::active_subscriptions(&account) == 1);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -430,9 +430,9 @@ fun test_multiple_subscriptions_same_merchant() {
         &mut account, c2, 5_000_000, 3600_000, 3,
         &clock, scenario.ctx(),
     );
-    assert!(merchant::get_active_subscriptions(&account) == 2);
+    assert!(merchant::active_subscriptions(&account) == 2);
     // total: 10 (payer1 first) + 5 (payer2 first) = 15
-    assert!(merchant::get_total_received(&account) == 15_000_000);
+    assert!(merchant::total_received(&account) == 15_000_000);
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
 
@@ -441,15 +441,15 @@ fun test_multiple_subscriptions_same_merchant() {
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     let sub1 = scenario.take_shared<payment::Subscription<TEST_USDC>>();
     // Need to find payer1's sub
-    if (payment::get_sub_payer(&sub1) == payer1) {
+    if (payment::sub_payer(&sub1) == payer1) {
         payment::cancel_subscription(&mut account, sub1, scenario.ctx());
-        assert!(merchant::get_active_subscriptions(&account) == 1);
+        assert!(merchant::active_subscriptions(&account) == 1);
         test_scenario::return_shared(account);
     } else {
         test_scenario::return_shared(sub1);
         let sub2 = scenario.take_shared<payment::Subscription<TEST_USDC>>();
         payment::cancel_subscription(&mut account, sub2, scenario.ctx());
-        assert!(merchant::get_active_subscriptions(&account) == 1);
+        assert!(merchant::active_subscriptions(&account) == 1);
         test_scenario::return_shared(account);
     };
 
@@ -488,7 +488,7 @@ fun test_yield_claim_then_more_payments() {
     let yield_coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
     router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
@@ -501,9 +501,9 @@ fun test_yield_claim_then_more_payments() {
     payment::pay_once(&mut account, c2, &clock, scenario.ctx());
 
     // State: total=150, idle=150 (external yield doesn't deduct idle), yield=0
-    assert!(merchant::get_total_received(&account) == 150_000_000);
-    assert!(merchant::get_idle_principal(&account) == 150_000_000);
-    assert!(merchant::get_accrued_yield(&account) == 0);
+    assert!(merchant::total_received(&account) == 150_000_000);
+    assert!(merchant::idle_principal(&account) == 150_000_000);
+    assert!(merchant::accrued_yield(&account) == 0);
 
     test_scenario::return_shared(account);
     clock::destroy_for_testing(clock);
@@ -548,7 +548,7 @@ fun test_router_fallback_with_yield_flow() {
     let yield_coin = coin::mint_for_testing<TEST_USDC>(25_000_000, scenario.ctx());
     router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
 
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);

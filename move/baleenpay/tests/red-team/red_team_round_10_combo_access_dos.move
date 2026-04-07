@@ -76,8 +76,8 @@ fun red_team_round_10a2_cancel_allowed_during_self_pause() {
     let cap = scenario.take_from_sender<merchant::MerchantCap>();
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::self_pause(&cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == false);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);
 

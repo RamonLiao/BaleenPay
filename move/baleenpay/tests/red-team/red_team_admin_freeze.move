@@ -62,7 +62,7 @@ fun red_team_freeze_bypass_claim_yield() {
     scenario.next_tx(admin);
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 500_000);
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 500_000);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 500_000);
     let yield_coin = coin::mint_for_testing<TEST_USDC>(500_000, scenario.ctx());
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
     router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
@@ -71,8 +71,8 @@ fun red_team_freeze_bypass_claim_yield() {
     // Admin freezes the merchant
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == true);
     scenario.return_to_sender(admin_cap);
     test_scenario::return_shared(account);
 
@@ -96,7 +96,7 @@ fun red_team_freeze_bypass_claim_yield() {
 // Round 2: DEFENDED — Independent pause flags preserve self-pause after admin unfreeze
 //
 // Scenario: Merchant self-pauses → Admin freezes → Admin unfreezes.
-// Expected: Merchant's self-pause is preserved. get_paused() still true.
+// Expected: Merchant's self-pause is preserved. is_paused() still true.
 // ══════════════════════════════════════════════════════════════════
 #[test]
 fun red_team_state_consistency_self_pause_preserved_after_admin_unfreeze() {
@@ -111,9 +111,9 @@ fun red_team_state_consistency_self_pause_preserved_after_admin_unfreeze() {
     let cap = scenario.take_from_sender<merchant::MerchantCap>();
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::self_pause(&cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == false);
-    assert!(merchant::get_self_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == false);
+    assert!(merchant::is_self_paused(&account) == true);
     scenario.return_to_sender(cap);
     test_scenario::return_shared(account);
 
@@ -122,17 +122,17 @@ fun red_team_state_consistency_self_pause_preserved_after_admin_unfreeze() {
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == true);
-    assert!(merchant::get_self_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == true);
+    assert!(merchant::is_self_paused(&account) == true);
 
     // Step 3: Admin unfreezes — only clears admin flag
     merchant::unpause_merchant(&admin_cap, &mut account);
 
     // DEFENDED: self-pause preserved, merchant still paused
-    assert!(merchant::get_paused(&account) == true, 0);       // still paused (from self)
-    assert!(merchant::get_admin_paused(&account) == false, 0); // admin cleared
-    assert!(merchant::get_self_paused(&account) == true, 0);   // self preserved
+    assert!(merchant::is_paused(&account) == true, 0);       // still paused (from self)
+    assert!(merchant::is_admin_paused(&account) == false, 0); // admin cleared
+    assert!(merchant::is_self_paused(&account) == true, 0);   // self preserved
 
     scenario.return_to_sender(admin_cap);
     test_scenario::return_shared(account);
@@ -178,7 +178,7 @@ fun red_team_self_unpause_blocked_by_admin_freeze() {
 // Round 4: INFORMATIONAL — fund_subscription blocked during admin freeze
 //
 // Verify: Admin freezes merchant. Payer calls fund_subscription which
-//         checks get_paused(). Since admin freeze sets paused=true,
+//         checks is_paused(). Since admin freeze sets paused=true,
 //         this should correctly abort with EPaused.
 // ══════════════════════════════════════════════════════════════════
 #[test]
@@ -211,13 +211,13 @@ fun red_team_fund_subscription_blocked_during_admin_freeze() {
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == true);
     scenario.return_to_sender(admin_cap);
     test_scenario::return_shared(account);
 
     // ATTACK: Payer tries to fund subscription while admin-frozen
-    // fund_subscription checks get_paused() — should abort
+    // fund_subscription checks is_paused() — should abort
     scenario.next_tx(payer);
     let account = scenario.take_shared<merchant::MerchantAccount>();
     let mut sub = scenario.take_shared<payment::Subscription<TEST_USDC>>();
@@ -252,18 +252,18 @@ fun red_team_double_admin_freeze_idempotent() {
 
     // First freeze
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == true);
 
     // Second freeze — should be idempotent, no abort
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
-    assert!(merchant::get_admin_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
+    assert!(merchant::is_admin_paused(&account) == true);
 
     // Verify single unpause clears everything
     merchant::unpause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == false);
-    assert!(merchant::get_admin_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == false);
+    assert!(merchant::is_admin_paused(&account) == false);
 
     // DEFENDED: No state corruption from double freeze
     scenario.return_to_sender(admin_cap);
@@ -291,15 +291,15 @@ fun red_team_unpause_without_prior_pause() {
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
 
     // Verify initial state: not paused
-    assert!(merchant::get_paused(&account) == false);
-    assert!(merchant::get_admin_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == false);
+    assert!(merchant::is_admin_paused(&account) == false);
 
     // Admin unpauses a non-paused merchant — no abort
     merchant::unpause_merchant(&admin_cap, &mut account);
 
     // State unchanged
-    assert!(merchant::get_paused(&account) == false);
-    assert!(merchant::get_admin_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == false);
+    assert!(merchant::is_admin_paused(&account) == false);
 
     // DEFENDED: No state corruption.
     // NOTE: Emits MerchantUnpaused event even though merchant was never paused.

@@ -35,9 +35,9 @@ fun test_attack_cycle_farming_no_value_creation() {
     merchant::add_payment_for_testing(&mut account, 10000);
 
     // Initial state
-    let initial_idle = merchant::get_idle_principal(&account);
+    let initial_idle = merchant::idle_principal(&account);
     assert!(initial_idle == 10000);
-    assert!(merchant::get_farming_principal(&account) == 0);
+    assert!(merchant::farming_principal(&account) == 0);
 
     // Cycle 10 times: move 1000 to farming, then return 500
     let mut i = 0;
@@ -51,8 +51,8 @@ fun test_attack_cycle_farming_no_value_creation() {
     // idle: 10000 - (10 * 1000) = 0
     // farming: 10 * (1000 - 500) = 5000
     // NOTE: return_from_farming does NOT add back to idle!
-    let final_idle = merchant::get_idle_principal(&account);
-    let final_farming = merchant::get_farming_principal(&account);
+    let final_idle = merchant::idle_principal(&account);
+    let final_farming = merchant::farming_principal(&account);
 
     assert!(final_idle == 0, 100);
     assert!(final_farming == 5000, 101);

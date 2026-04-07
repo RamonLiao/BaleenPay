@@ -52,7 +52,7 @@ fun test_fix_farming_matches_coin_value() {
     router::keeper_deposit_to_farm(&admin_cap, &mut account, &mut sv, stablecoin);
 
     // farming_principal MUST equal coin.value() = 500 (not any other number)
-    let farming = merchant::get_farming_principal(&account);
+    let farming = merchant::farming_principal(&account);
     let vault_bal = router::stablecoin_vault_balance(&sv);
     assert!(farming == 500, 100);
     assert!(vault_bal == 500, 101);

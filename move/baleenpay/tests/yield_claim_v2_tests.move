@@ -37,13 +37,13 @@ fun test_credit_external_yield_does_not_deduct_principal() {
     scenario.next_tx(merchant_addr);
     let mut account = scenario.take_shared<MerchantAccount>();
     merchant::add_payment_for_testing(&mut account, 1000);
-    assert!(merchant::get_idle_principal(&account) == 1000);
-    assert!(merchant::get_accrued_yield(&account) == 0);
+    assert!(merchant::idle_principal(&account) == 1000);
+    assert!(merchant::accrued_yield(&account) == 0);
 
     // credit_external_yield_typed: should NOT deduct idle_principal
     merchant::credit_external_yield_typed_for_testing<USDB>(&mut account, 500);
-    assert!(merchant::get_idle_principal(&account) == 1000); // unchanged!
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 500);
+    assert!(merchant::idle_principal(&account) == 1000); // unchanged!
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 500);
 
     test_scenario::return_shared(account);
     scenario.end();
@@ -75,7 +75,7 @@ fun test_claim_yield_from_vault() {
         &mut account,
         usdb_coin,
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 500);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 500);
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);
     test_scenario::return_shared(yield_vault);
@@ -91,7 +91,7 @@ fun test_claim_yield_from_vault() {
         &mut yield_vault,
         scenario.ctx(),
     );
-    assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<USDB>(&account) == 0);
     test_scenario::return_shared(yield_vault);
     test_scenario::return_shared(account);
     scenario.return_to_sender(cap);

@@ -48,7 +48,7 @@ fun red_team_round_7a_mixed_coin_type_ledger() {
 
     // FINDING: total_received = 3M but it mixes two different coin types!
     // Ledger doesn't track per-coin-type totals.
-    assert!(merchant::get_total_received(&account) == 3_000_000);
+    assert!(merchant::total_received(&account) == 3_000_000);
 
     test_scenario::return_shared(account);
     clock2.destroy_for_testing();
@@ -86,8 +86,8 @@ fun red_team_round_7b_multi_type_subscriptions_independent() {
     // Verify: 2 active subscriptions, total from both first payments = 2M
     scenario.next_tx(payer);
     let account = scenario.take_shared<MerchantAccount>();
-    assert!(merchant::get_active_subscriptions(&account) == 2);
-    assert!(merchant::get_total_received(&account) == 2_000_000); // 1M + 1M first payments
+    assert!(merchant::active_subscriptions(&account) == 2);
+    assert!(merchant::total_received(&account) == 2_000_000); // 1M + 1M first payments
     test_scenario::return_shared(account);
 
     clock2.destroy_for_testing();

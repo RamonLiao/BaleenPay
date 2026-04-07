@@ -44,7 +44,7 @@ fun red_team_round_4a_remove_then_double_pay() {
     let coin1 = coin::mint_for_testing<TEST_USDC>(1_000_000, scenario.ctx());
     let clock = clock::create_for_testing(scenario.ctx());
     payment::pay_once_v2(&mut account, coin1, b"ORDER-001".to_string(), &clock, scenario.ctx());
-    assert!(merchant::get_total_received(&account) == 1_000_000);
+    assert!(merchant::total_received(&account) == 1_000_000);
     test_scenario::return_shared(account);
     clock.destroy_for_testing();
 
@@ -64,7 +64,7 @@ fun red_team_round_4a_remove_then_double_pay() {
     let clock2 = clock::create_for_testing(scenario.ctx());
     payment::pay_once_v2(&mut account, coin2, b"ORDER-001".to_string(), &clock2, scenario.ctx());
     // Double payment succeeded -- merchant received 2M total
-    assert!(merchant::get_total_received(&account) == 2_000_000);
+    assert!(merchant::total_received(&account) == 2_000_000);
     test_scenario::return_shared(account);
     clock2.destroy_for_testing();
     scenario.end();
@@ -104,7 +104,7 @@ fun red_team_round_4b_dust_payment_storage_cost() {
     // Verify: 10 dust payments, 10 dynamic fields created
     scenario.next_tx(attacker);
     let account = scenario.take_shared<MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 10); // 10 * 1 unit
+    assert!(merchant::total_received(&account) == 10); // 10 * 1 unit
     test_scenario::return_shared(account);
     scenario.end();
     // FINDING: Each pay_once_v2 adds a dynamic field. Attacker pays gas + 1 unit per field.
@@ -143,7 +143,7 @@ fun red_team_round_4c_double_claim_yield() {
     let mut account = scenario.take_shared<MerchantAccount>();
     let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-    assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
+    assert!(merchant::accrued_yield_typed<TEST_USDC>(&account) == 0);
     // Second claim in same tx should fail with EZeroYield
     router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
     test_scenario::return_shared(yield_vault);

@@ -25,12 +25,12 @@ fun test_register_merchant() {
 
     // verify MerchantAccount exists as shared
     let account = scenario.take_shared<merchant::MerchantAccount>();
-    assert!(merchant::get_total_received(&account) == 0);
-    assert!(merchant::get_brand_name(&account) == b"TestBrand".to_string());
-    assert!(merchant::get_owner(&account) == merchant_addr);
-    assert!(merchant::get_paused(&account) == false);
-    assert!(merchant::get_idle_principal(&account) == 0);
-    assert!(merchant::get_accrued_yield(&account) == 0);
+    assert!(merchant::total_received(&account) == 0);
+    assert!(merchant::brand_name(&account) == b"TestBrand".to_string());
+    assert!(merchant::owner(&account) == merchant_addr);
+    assert!(merchant::is_paused(&account) == false);
+    assert!(merchant::idle_principal(&account) == 0);
+    assert!(merchant::accrued_yield(&account) == 0);
     test_scenario::return_shared(account);
 
     scenario.end();
@@ -72,11 +72,11 @@ fun test_pause_unpause_merchant() {
     let admin_cap = scenario.take_from_sender<merchant::AdminCap>();
     let mut account = scenario.take_shared<merchant::MerchantAccount>();
     merchant::pause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == true);
+    assert!(merchant::is_paused(&account) == true);
 
     // admin unpauses
     merchant::unpause_merchant(&admin_cap, &mut account);
-    assert!(merchant::get_paused(&account) == false);
+    assert!(merchant::is_paused(&account) == false);
 
     test_scenario::return_shared(account);
     scenario.return_to_sender(admin_cap);

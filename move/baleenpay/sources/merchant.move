@@ -55,7 +55,7 @@ public struct MerchantCap has key, store {
 }
 
 /// Shared merchant ledger. Payers write via pay_once; privileged ops need cap.
-/// Dual-pause model: two independent flags, `get_paused()` returns OR.
+/// Dual-pause model: two independent flags, `is_paused()` returns OR.
 ///   - `paused_by_admin`: regulatory freeze (AdminCap-gated)
 ///   - `paused_by_self`: merchant voluntary pause (MerchantCap-gated)
 /// Admin operations never touch `paused_by_self` and vice versa.
@@ -261,7 +261,7 @@ public(package) fun credit_external_yield_typed<T>(
 public(package) fun move_to_farming(account: &mut MerchantAccount, amount: u64) {
     assert!(account.idle_principal >= amount, EInsufficientPrincipal);
     account.idle_principal = account.idle_principal - amount;
-    let farming = get_farming_principal_internal(&account.id);
+    let farming = farming_principal_internal(&account.id);
     if (dynamic_field::exists_(&account.id, FarmingPrincipalKey {})) {
         *dynamic_field::borrow_mut(&mut account.id, FarmingPrincipalKey {}) = farming + amount;
     } else {
@@ -271,7 +271,7 @@ public(package) fun move_to_farming(account: &mut MerchantAccount, amount: u64) 
 
 /// Return farming principal (merchant redeems from StableLayer).
 public(package) fun return_from_farming(account: &mut MerchantAccount, amount: u64) {
-    let farming = get_farming_principal_internal(&account.id);
+    let farming = farming_principal_internal(&account.id);
     assert!(farming >= amount, EInsufficientPrincipal);
     *dynamic_field::borrow_mut(&mut account.id, FarmingPrincipalKey {}) = farming - amount;
 }
@@ -360,14 +360,14 @@ public fun add_payment_for_testing(account: &mut MerchantAccount, amount: u64) {
 
 // ── Getters (for tests and payment module) ──
 
-public fun get_total_received(account: &MerchantAccount): u64 { account.total_received }
-public fun get_brand_name(account: &MerchantAccount): String { account.brand_name }
+public fun total_received(account: &MerchantAccount): u64 { account.total_received }
+public fun brand_name(account: &MerchantAccount): String { account.brand_name }
 /// Returns true if paused by ANY source (admin OR self).
-public fun get_paused(account: &MerchantAccount): bool { account.paused_by_admin || account.paused_by_self }
-public fun get_idle_principal(account: &MerchantAccount): u64 { account.idle_principal }
-public fun get_accrued_yield(account: &MerchantAccount): u64 { account.accrued_yield }
+public fun is_paused(account: &MerchantAccount): bool { account.paused_by_admin || account.paused_by_self }
+public fun idle_principal(account: &MerchantAccount): u64 { account.idle_principal }
+public fun accrued_yield(account: &MerchantAccount): u64 { account.accrued_yield }
 /// Returns accrued yield for a specific coin type (from dynamic field).
-public fun get_accrued_yield_typed<T>(account: &MerchantAccount): u64 {
+public fun accrued_yield_typed<T>(account: &MerchantAccount): u64 {
     let key = AccruedYieldKey<T> {};
     if (dynamic_field::exists_(&account.id, key)) {
         *dynamic_field::borrow<AccruedYieldKey<T>, u64>(&account.id, key)
@@ -375,17 +375,17 @@ public fun get_accrued_yield_typed<T>(account: &MerchantAccount): u64 {
         0
     }
 }
-public fun get_owner(account: &MerchantAccount): address { account.owner }
-public fun get_active_subscriptions(account: &MerchantAccount): u64 { account.active_subscriptions }
-public fun get_admin_paused(account: &MerchantAccount): bool { account.paused_by_admin }
-public fun get_self_paused(account: &MerchantAccount): bool { account.paused_by_self }
-public fun get_merchant_id(cap: &MerchantCap): ID { cap.merchant_id }
+public fun owner(account: &MerchantAccount): address { account.owner }
+public fun active_subscriptions(account: &MerchantAccount): u64 { account.active_subscriptions }
+public fun is_admin_paused(account: &MerchantAccount): bool { account.paused_by_admin }
+public fun is_self_paused(account: &MerchantAccount): bool { account.paused_by_self }
+public fun merchant_id(cap: &MerchantCap): ID { cap.merchant_id }
 
-public fun get_farming_principal(account: &MerchantAccount): u64 {
-    get_farming_principal_internal(&account.id)
+public fun farming_principal(account: &MerchantAccount): u64 {
+    farming_principal_internal(&account.id)
 }
 
-fun get_farming_principal_internal(uid: &UID): u64 {
+fun farming_principal_internal(uid: &UID): u64 {
     if (dynamic_field::exists_(uid, FarmingPrincipalKey {})) {
         *dynamic_field::borrow(uid, FarmingPrincipalKey {})
     } else {
