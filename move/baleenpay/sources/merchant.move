@@ -22,11 +22,16 @@ module baleenpay::merchant {
     const EAdminFrozen: u64 = 24;         // admin-paused, self_unpause blocked
     #[error]
     const EOverflow: u64 = 23;            // arithmetic overflow guard
+    #[error]
+    const EAlreadyMigrated: u64 = 28;    // admin_migrate_yield already called for this type
 
     // ── Structs ──
 
     /// Dynamic field key for farming_principal (Option B — no struct migration).
     public struct FarmingPrincipalKey has copy, drop, store {}
+
+    /// Dynamic field key for per-type accrued yield tracking.
+    public struct AccruedYieldKey<phantom T> has copy, drop, store {}
 
     /// Root admin privilege. Created at init, transferred to deployer.
     public struct AdminCap has key, store {
@@ -162,6 +167,38 @@ module baleenpay::merchant {
         events::emit_merchant_unpaused(object::id(account), false);
     }
 
+    /// One-time migration: move accrued_yield struct field value into AccruedYieldKey<T> df.
+    /// Guard: asserts df does NOT already exist to prevent double-call.
+    public fun admin_migrate_yield<T>(
+        _admin: &AdminCap,
+        account: &mut MerchantAccount,
+    ) {
+        let key = AccruedYieldKey<T> {};
+        assert!(!dynamic_field::exists_(&account.id, key), EAlreadyMigrated);
+        dynamic_field::add(&mut account.id, key, account.accrued_yield);
+        account.accrued_yield = 0;
+    }
+
+    /// Admin sets accrued yield for a specific type. For fixing accounting errors.
+    public fun admin_set_yield<T>(
+        _admin: &AdminCap,
+        account: &mut MerchantAccount,
+        new_amount: u64,
+    ) {
+        let key = AccruedYieldKey<T> {};
+        if (dynamic_field::exists_(&account.id, key)) {
+            if (new_amount == 0) {
+                dynamic_field::remove<AccruedYieldKey<T>, u64>(&mut account.id, key);
+            } else {
+                *dynamic_field::borrow_mut<AccruedYieldKey<T>, u64>(&mut account.id, key) = new_amount;
+            };
+        } else if (new_amount > 0) {
+            dynamic_field::add(&mut account.id, key, new_amount);
+        };
+        account.accrued_yield = 0;
+        events::emit_yield_corrected(object::id(account), new_amount);
+    }
+
     // ── Package-internal mutators (used by payment module) ──
 
     /// Expose UID for dynamic field access (order_id dedup in payment module).
@@ -199,6 +236,21 @@ module baleenpay::merchant {
     /// This is different from credit_yield which moves from principal to yield.
     public(package) fun credit_external_yield(account: &mut MerchantAccount, amount: u64) {
         account.accrued_yield = account.accrued_yield + amount;
+    }
+
+    /// Credit yield per coin type — writes to dynamic field.
+    /// Used by router::keeper_deposit_yield<T> post-upgrade.
+    public(package) fun credit_external_yield_typed<T>(
+        account: &mut MerchantAccount,
+        amount: u64,
+    ) {
+        let key = AccruedYieldKey<T> {};
+        if (dynamic_field::exists_(&account.id, key)) {
+            let current = dynamic_field::borrow_mut<AccruedYieldKey<T>, u64>(&mut account.id, key);
+            *current = *current + amount;
+        } else {
+            dynamic_field::add(&mut account.id, key, amount);
+        };
     }
 
     /// Move idle principal to farming. Called by router when keeper deposits to StableLayer.
@@ -247,6 +299,21 @@ module baleenpay::merchant {
         amount
     }
 
+    /// Reset yield for specific coin type — removes df, returns amount.
+    /// Used by router::claim_yield_v2<T> post-upgrade.
+    public(package) fun reset_accrued_yield_typed<T>(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+    ): u64 {
+        assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        let key = AccruedYieldKey<T> {};
+        assert!(dynamic_field::exists_(&account.id, key), EZeroYield);
+        let amount = dynamic_field::remove<AccruedYieldKey<T>, u64>(&mut account.id, key);
+        assert!(amount > 0, EZeroYield);
+        amount
+    }
+
     #[test_only]
     /// Simulate yield accrual for testing claim_yield.
     public fun credit_yield_for_testing(account: &mut MerchantAccount, amount: u64) {
@@ -271,6 +338,15 @@ module baleenpay::merchant {
     public fun get_paused(account: &MerchantAccount): bool { account.paused_by_admin || account.paused_by_self }
     public fun get_idle_principal(account: &MerchantAccount): u64 { account.idle_principal }
     public fun get_accrued_yield(account: &MerchantAccount): u64 { account.accrued_yield }
+    /// Returns accrued yield for a specific coin type (from dynamic field).
+    public fun get_accrued_yield_typed<T>(account: &MerchantAccount): u64 {
+        let key = AccruedYieldKey<T> {};
+        if (dynamic_field::exists_(&account.id, key)) {
+            *dynamic_field::borrow<AccruedYieldKey<T>, u64>(&account.id, key)
+        } else {
+            0
+        }
+    }
     public fun get_owner(account: &MerchantAccount): address { account.owner }
     public fun get_active_subscriptions(account: &MerchantAccount): u64 { account.active_subscriptions }
     public fun get_admin_paused(account: &MerchantAccount): bool { account.paused_by_admin }
@@ -297,5 +373,10 @@ module baleenpay::merchant {
     #[test_only]
     public fun return_from_farming_for_testing(account: &mut MerchantAccount, amount: u64) {
         return_from_farming(account, amount);
+    }
+
+    #[test_only]
+    public fun credit_external_yield_typed_for_testing<T>(account: &mut MerchantAccount, amount: u64) {
+        credit_external_yield_typed<T>(account, amount);
     }
 }

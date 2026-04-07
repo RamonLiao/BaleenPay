@@ -277,6 +277,15 @@ module baleenpay::events {
         event::emit(VaultWithdrawn { vault_id, amount, keeper, timestamp });
     }
 
+    public struct YieldCorrected has copy, drop {
+        merchant_id: ID,
+        new_amount: u64,
+    }
+
+    public(package) fun emit_yield_corrected(merchant_id: ID, new_amount: u64) {
+        event::emit(YieldCorrected { merchant_id, new_amount });
+    }
+
     public(package) fun emit_yield_credited(
         merchant_id: ID,
         amount: u64,

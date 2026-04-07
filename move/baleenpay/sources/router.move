@@ -204,7 +204,7 @@ module baleenpay::router {
         let amount = coin.value();
         assert!(amount > 0, EZeroAmount);
         yield_vault.balance.join(coin.into_balance());
-        merchant::credit_external_yield(account, amount);
+        merchant::credit_external_yield_typed<T>(account, amount);
     }
 
     /// Merchant withdraws idle principal from Vault.
@@ -231,7 +231,7 @@ module baleenpay::router {
         yield_vault: &mut YieldVault<T>,
         ctx: &mut TxContext,
     ) {
-        let amount = merchant::reset_accrued_yield(cap, account);
+        let amount = merchant::reset_accrued_yield_typed<T>(cap, account);
         let coin = yield_vault.balance.split(amount).into_coin(ctx);
         transfer::public_transfer(coin, merchant::get_owner(account));
         events::emit_yield_claimed(object::id(account), amount);

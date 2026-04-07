@@ -128,7 +128,7 @@ module baleenpay::red_team_round_4_economic {
         let coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account, coin, &clock, scenario.ctx());
-        merchant::credit_external_yield_for_testing(&mut account, 5_000_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 5_000_000);
         test_scenario::return_shared(account);
 
         let yield_coin = coin::mint_for_testing<TEST_USDC>(5_000_000, scenario.ctx());
@@ -143,7 +143,7 @@ module baleenpay::red_team_round_4_economic {
         let mut account = scenario.take_shared<MerchantAccount>();
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
         // Second claim in same tx should fail with EZeroYield
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
         test_scenario::return_shared(yield_vault);

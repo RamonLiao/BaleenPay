@@ -40,10 +40,10 @@ module baleenpay::yield_claim_v2_tests {
         assert!(merchant::get_idle_principal(&account) == 1000);
         assert!(merchant::get_accrued_yield(&account) == 0);
 
-        // credit_external_yield: should NOT deduct idle_principal
-        merchant::credit_external_yield_for_testing(&mut account, 500);
+        // credit_external_yield_typed: should NOT deduct idle_principal
+        merchant::credit_external_yield_typed_for_testing<USDB>(&mut account, 500);
         assert!(merchant::get_idle_principal(&account) == 1000); // unchanged!
-        assert!(merchant::get_accrued_yield(&account) == 500);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 500);
 
         test_scenario::return_shared(account);
         scenario.end();
@@ -75,7 +75,7 @@ module baleenpay::yield_claim_v2_tests {
             &mut account,
             usdb_coin,
         );
-        assert!(merchant::get_accrued_yield(&account) == 500);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 500);
         test_scenario::return_shared(account);
         scenario.return_to_sender(admin_cap);
         test_scenario::return_shared(yield_vault);
@@ -91,7 +91,7 @@ module baleenpay::yield_claim_v2_tests {
             &mut yield_vault,
             scenario.ctx(),
         );
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
         test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
@@ -123,7 +123,7 @@ module baleenpay::yield_claim_v2_tests {
         // Manually set accrued_yield > vault balance
         scenario.next_tx(admin);
         let mut account = scenario.take_shared<MerchantAccount>();
-        merchant::credit_external_yield_for_testing(&mut account, 1000);
+        merchant::credit_external_yield_typed_for_testing<USDB>(&mut account, 1000);
         test_scenario::return_shared(account);
 
         // Merchant tries to claim — vault only has 0

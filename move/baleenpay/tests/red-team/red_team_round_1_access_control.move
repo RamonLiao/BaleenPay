@@ -47,7 +47,7 @@ module baleenpay::red_team_round_1_access_control {
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account_b, payment_coin, &clock, scenario.ctx());
         // Simulate external yield + fund YieldVault
-        merchant::credit_external_yield_for_testing(&mut account_b, 500_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account_b, 500_000);
         test_scenario::return_shared(account_b);
         let yield_coin = coin::mint_for_testing<TEST_USDC>(500_000, scenario.ctx());
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();

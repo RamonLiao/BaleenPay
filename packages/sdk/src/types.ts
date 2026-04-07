@@ -129,6 +129,7 @@ export interface MerchantInfo {
   brandName: string
   totalReceived: bigint
   idlePrincipal: bigint
+  /** @deprecated Use BaleenPayClient.getAccruedYieldTyped() instead. Always 0 after migration. */
   accruedYield: bigint
   activeSubscriptions: number
   pausedByAdmin: boolean

@@ -265,6 +265,32 @@ export class BaleenPay {
   }
 
   /**
+   * Get accrued yield for a specific coin type (reads dynamic field).
+   * Returns 0 if no yield of this type has been credited.
+   */
+  async getAccruedYieldTyped(coinType: string, merchantId?: ObjectId): Promise<bigint> {
+    const id = merchantId ?? this.config.merchantId
+    const dfName = {
+      type: `${this.config.packageId}::merchant::AccruedYieldKey<${coinType}>`,
+      bcs: new Uint8Array([]),
+    }
+    try {
+      const { dynamicField } = await this.grpcClient.getDynamicField({
+        parentId: id,
+        name: dfName,
+      })
+      // value is BCS-encoded u64 (8 bytes, little-endian)
+      const bytes = dynamicField.value.bcs
+      if (bytes.length < 8) return 0n
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      return view.getBigUint64(0, true)
+    } catch {
+      // Dynamic field does not exist — no yield of this type
+      return 0n
+    }
+  }
+
+  /**
    * Fetch subscription info from on-chain state.
    */
   async getSubscription(subscriptionId: ObjectId): Promise<SubscriptionInfo> {

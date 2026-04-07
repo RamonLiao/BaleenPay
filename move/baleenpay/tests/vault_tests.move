@@ -152,7 +152,7 @@ module baleenpay::vault_tests {
             &admin_cap, &mut yield_vault, &mut account, usdb,
         );
         assert!(router::yield_vault_balance(&yield_vault) == 300);
-        assert!(merchant::get_accrued_yield(&account) == 300);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 300);
         assert!(merchant::get_idle_principal(&account) == 0); // unchanged
         test_scenario::return_shared(account);
         test_scenario::return_shared(yield_vault);

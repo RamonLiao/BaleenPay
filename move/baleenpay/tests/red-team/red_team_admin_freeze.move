@@ -61,8 +61,8 @@ module baleenpay::red_team_admin_freeze {
         // Simulate external yield + fund YieldVault
         scenario.next_tx(admin);
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_external_yield_for_testing(&mut account, 500_000);
-        assert!(merchant::get_accrued_yield(&account) == 500_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 500_000);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 500_000);
         let yield_coin = coin::mint_for_testing<TEST_USDC>(500_000, scenario.ctx());
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);

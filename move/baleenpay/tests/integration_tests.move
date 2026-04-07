@@ -56,8 +56,8 @@ module baleenpay::integration_tests {
         assert!(merchant::get_accrued_yield(&account) == 0);
 
         // ─ Step 2: Simulate external yield (10 USDC) + fund YieldVault ─
-        merchant::credit_external_yield_for_testing(&mut account, 10_000_000);
-        assert!(merchant::get_accrued_yield(&account) == 10_000_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 10_000_000);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 10_000_000);
 
         test_scenario::return_shared(account);
 
@@ -74,7 +74,7 @@ module baleenpay::integration_tests {
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
 
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
         // total_received unchanged by yield ops
         assert!(merchant::get_total_received(&account) == 200_000_000);
 
@@ -482,13 +482,13 @@ module baleenpay::integration_tests {
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_external_yield_for_testing(&mut account, 10_000_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 10_000_000);
         // Fund YieldVault
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         let yield_coin = coin::mint_for_testing<TEST_USDC>(10_000_000, scenario.ctx());
         router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
         test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
         scenario.return_to_sender(cap);
@@ -542,13 +542,13 @@ module baleenpay::integration_tests {
         scenario.next_tx(merchant_addr);
         let cap = scenario.take_from_sender<merchant::MerchantCap>();
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
-        merchant::credit_external_yield_for_testing(&mut account, 25_000_000);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 25_000_000);
         // Fund YieldVault
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         let yield_coin = coin::mint_for_testing<TEST_USDC>(25_000_000, scenario.ctx());
         router::deposit_to_yield_vault_for_testing(&mut yield_vault, yield_coin);
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
 
         test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);

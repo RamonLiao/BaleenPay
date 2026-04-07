@@ -449,7 +449,7 @@ module baleenpay::monkey_tests {
         let coin = coin::mint_for_testing<TEST_USDC>(100, scenario.ctx());
         let clock = clock::create_for_testing(scenario.ctx());
         payment::pay_once(&mut account, coin, &clock, scenario.ctx());
-        merchant::credit_external_yield_for_testing(&mut account, 50);
+        merchant::credit_external_yield_typed_for_testing<TEST_USDC>(&mut account, 50);
         test_scenario::return_shared(account);
 
         let yield_coin = coin::mint_for_testing<TEST_USDC>(50, scenario.ctx());
@@ -464,7 +464,7 @@ module baleenpay::monkey_tests {
         let mut account = scenario.take_shared<merchant::MerchantAccount>();
         let mut yield_vault = scenario.take_shared<YieldVault<TEST_USDC>>();
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<TEST_USDC>(&account) == 0);
 
         // Second claim → zero yield → abort
         router::claim_yield_v2<TEST_USDC>(&cap, &mut account, &mut yield_vault, scenario.ctx());

@@ -241,7 +241,7 @@ module baleenpay::stablelayer_monkey_tests {
         router::keeper_deposit_yield<USDB>(
             &admin_cap, &mut yield_vault, &mut account, usdb,
         );
-        assert!(merchant::get_accrued_yield(&account) == 50);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 50);
         assert!(router::yield_vault_balance(&yield_vault) == 50);
         test_scenario::return_shared(account);
         test_scenario::return_shared(yield_vault);
@@ -253,7 +253,7 @@ module baleenpay::stablelayer_monkey_tests {
         let mut account = scenario.take_shared<MerchantAccount>();
         let mut yield_vault = scenario.take_shared<YieldVault<USDB>>();
         router::claim_yield_v2<USDB>(&cap, &mut account, &mut yield_vault, scenario.ctx());
-        assert!(merchant::get_accrued_yield(&account) == 0);
+        assert!(merchant::get_accrued_yield_typed<USDB>(&account) == 0);
         assert!(router::yield_vault_balance(&yield_vault) == 0);
         test_scenario::return_shared(yield_vault);
         test_scenario::return_shared(account);
