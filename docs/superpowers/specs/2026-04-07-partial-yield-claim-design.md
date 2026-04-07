@@ -40,6 +40,7 @@ const EExceedsAccrued: u64 = <next_available>;
 ```move
 /// Debit a specific amount from typed accrued yield. Returns the debited amount.
 /// Removes the df entirely if remaining is zero (no zombie dynamic fields).
+/// Uses immutable borrow first to avoid borrow checker conflict between borrow_mut and remove.
 public(package) fun debit_accrued_yield_typed<T>(
     cap: &MerchantCap,
     account: &mut MerchantAccount,
@@ -50,11 +51,13 @@ public(package) fun debit_accrued_yield_typed<T>(
     assert!(amount > 0, EZeroAmount);
     let key = AccruedYieldKey<T> {};
     assert!(dynamic_field::exists_(&account.id, key), EZeroYield);
-    let current = dynamic_field::borrow_mut<AccruedYieldKey<T>, u64>(&mut account.id, key);
-    assert!(amount <= *current, EExceedsAccrued);
-    *current = *current - amount;
-    if (*current == 0) {
+    let current_val = *dynamic_field::borrow<AccruedYieldKey<T>, u64>(&account.id, key);
+    assert!(amount <= current_val, EExceedsAccrued);
+    if (amount == current_val) {
         dynamic_field::remove<AccruedYieldKey<T>, u64>(&mut account.id, key);
+    } else {
+        let current = dynamic_field::borrow_mut<AccruedYieldKey<T>, u64>(&mut account.id, key);
+        *current = current_val - amount;
     };
     amount
 }
