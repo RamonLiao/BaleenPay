@@ -21,6 +21,7 @@ const keeperParams: KeeperParams = {
   adminCapId: '0xadmin',
   vaultId: '0x7777',
   yieldVaultId: '0x8888',
+  stablecoinVaultId: '0x6666',
 }
 
 describe('buildKeeperWithdraw', () => {

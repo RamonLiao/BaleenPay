@@ -1,6 +1,7 @@
 #[allow(unused_const)]
 module baleenpay::merchant {
     use sui::table::{Self, Table};
+    use sui::dynamic_field;
     use std::string::String;
     use baleenpay::events;
 
@@ -19,8 +20,13 @@ module baleenpay::merchant {
     const EInsufficientPrincipal: u64 = 8; // idle_principal < amount for credit_yield
     #[error]
     const EAdminFrozen: u64 = 24;         // admin-paused, self_unpause blocked
+    #[error]
+    const EOverflow: u64 = 23;            // arithmetic overflow guard
 
     // ── Structs ──
+
+    /// Dynamic field key for farming_principal (Option B — no struct migration).
+    public struct FarmingPrincipalKey has copy, drop, store {}
 
     /// Root admin privilege. Created at init, transferred to deployer.
     public struct AdminCap has key, store {
@@ -164,6 +170,7 @@ module baleenpay::merchant {
 
     /// Credit a one-time payment to the merchant ledger.
     public(package) fun add_payment(account: &mut MerchantAccount, amount: u64) {
+        assert!(account.total_received <= 18_446_744_073_709_551_615 - amount, EOverflow);
         account.total_received = account.total_received + amount;
         account.idle_principal = account.idle_principal + amount;
     }
@@ -192,6 +199,38 @@ module baleenpay::merchant {
     /// This is different from credit_yield which moves from principal to yield.
     public(package) fun credit_external_yield(account: &mut MerchantAccount, amount: u64) {
         account.accrued_yield = account.accrued_yield + amount;
+    }
+
+    /// Move idle principal to farming. Called by router when keeper deposits to StableLayer.
+    public(package) fun move_to_farming(account: &mut MerchantAccount, amount: u64) {
+        assert!(account.idle_principal >= amount, EInsufficientPrincipal);
+        account.idle_principal = account.idle_principal - amount;
+        let farming = get_farming_principal_internal(&account.id);
+        if (dynamic_field::exists_(&account.id, FarmingPrincipalKey {})) {
+            *dynamic_field::borrow_mut(&mut account.id, FarmingPrincipalKey {}) = farming + amount;
+        } else {
+            dynamic_field::add(&mut account.id, FarmingPrincipalKey {}, farming + amount);
+        };
+    }
+
+    /// Return farming principal (merchant redeems from StableLayer).
+    public(package) fun return_from_farming(account: &mut MerchantAccount, amount: u64) {
+        let farming = get_farming_principal_internal(&account.id);
+        assert!(farming >= amount, EInsufficientPrincipal);
+        *dynamic_field::borrow_mut(&mut account.id, FarmingPrincipalKey {}) = farming - amount;
+    }
+
+    /// Deduct idle_principal for merchant withdrawal.
+    /// Used by router::merchant_withdraw to avoid circular dependency.
+    public(package) fun deduct_idle_principal(
+        cap: &MerchantCap,
+        account: &mut MerchantAccount,
+        amount: u64,
+    ) {
+        assert!(!account.paused_by_admin && !account.paused_by_self, EPaused);
+        assert!(cap.merchant_id == object::id(account), ENotMerchantOwner);
+        assert!(account.idle_principal >= amount, EInsufficientPrincipal);
+        account.idle_principal = account.idle_principal - amount;
     }
 
     /// Reset accrued_yield to zero and return the previous value.
@@ -237,4 +276,26 @@ module baleenpay::merchant {
     public fun get_admin_paused(account: &MerchantAccount): bool { account.paused_by_admin }
     public fun get_self_paused(account: &MerchantAccount): bool { account.paused_by_self }
     public fun get_merchant_id(cap: &MerchantCap): ID { cap.merchant_id }
+
+    public fun get_farming_principal(account: &MerchantAccount): u64 {
+        get_farming_principal_internal(&account.id)
+    }
+
+    fun get_farming_principal_internal(uid: &UID): u64 {
+        if (dynamic_field::exists_(uid, FarmingPrincipalKey {})) {
+            *dynamic_field::borrow(uid, FarmingPrincipalKey {})
+        } else {
+            0
+        }
+    }
+
+    #[test_only]
+    public fun move_to_farming_for_testing(account: &mut MerchantAccount, amount: u64) {
+        move_to_farming(account, amount);
+    }
+
+    #[test_only]
+    public fun return_from_farming_for_testing(account: &mut MerchantAccount, amount: u64) {
+        return_from_farming(account, amount);
+    }
 }

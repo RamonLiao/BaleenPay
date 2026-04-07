@@ -63,16 +63,6 @@ module baleenpay::events {
         new_mode: u8,
     }
 
-    public struct BrandUsdRedeemed has copy, drop {
-        merchant_id: ID,
-        amount: u64,
-    }
-
-    public struct TreasurySetupCompleted has copy, drop {
-        treasury_id: ID,
-        vault_id: ID,
-    }
-
     // ── Emit helpers (Move disallows cross-module struct construction) ──
 
     public(package) fun emit_merchant_registered(merchant_id: ID, brand_name: String, owner: address) {
@@ -226,6 +216,46 @@ module baleenpay::events {
         amount: u64,
         source: u8,    // 0=manual, 1=stablelayer
         timestamp: u64,
+    }
+
+    public struct MerchantWithdrawn has copy, drop {
+        merchant_id: ID,
+        vault_id: ID,
+        amount: u64,
+    }
+
+    public(package) fun emit_merchant_withdrawn(
+        merchant_id: ID,
+        vault_id: ID,
+        amount: u64,
+    ) {
+        event::emit(MerchantWithdrawn { merchant_id, vault_id, amount });
+    }
+
+    public struct FarmDeposited has copy, drop {
+        merchant_id: ID,
+        amount: u64,
+        stablecoin_vault_id: ID,
+    }
+
+    public(package) fun emit_farm_deposited(
+        merchant_id: ID,
+        amount: u64,
+        stablecoin_vault_id: ID,
+    ) {
+        event::emit(FarmDeposited { merchant_id, amount, stablecoin_vault_id });
+    }
+
+    public struct FarmRedeemed has copy, drop {
+        merchant_id: ID,
+        amount: u64,
+    }
+
+    public(package) fun emit_farm_redeemed(
+        merchant_id: ID,
+        amount: u64,
+    ) {
+        event::emit(FarmRedeemed { merchant_id, amount });
     }
 
     public(package) fun emit_vault_deposited(

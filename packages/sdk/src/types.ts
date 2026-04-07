@@ -15,6 +15,7 @@ export interface BaleenPayConfig {
   graphqlUrl?: string
   vaultId?: ObjectId
   yieldVaultId?: ObjectId
+  stablecoinVaultId?: ObjectId
 }
 
 export interface PayParams {
@@ -97,7 +98,12 @@ export type Unsubscribe = () => void
 export interface StableLayerConfig {
   stableLayerPackageId: string
   stableLayerRegistryId: string
-  busdCoinType: string
+  farmPackageId: string
+  farmRegistryId: string
+  stablecoinType: string
+  usdcType: string
+  usdbType: string
+  mockFarmEntityType: string
 }
 
 export interface YieldInfo {
@@ -112,6 +118,7 @@ export interface KeeperParams {
   adminCapId: ObjectId
   vaultId: ObjectId
   yieldVaultId: ObjectId
+  stablecoinVaultId?: ObjectId
 }
 
 // ── Merchant info ──
@@ -126,6 +133,26 @@ export interface MerchantInfo {
   activeSubscriptions: number
   pausedByAdmin: boolean
   pausedBySelf: boolean
+}
+
+export interface MerchantBalance {
+  idle: bigint
+  farming: bigint
+  yield: bigint
+  total: bigint
+}
+
+export interface RedeemParams {
+  merchantCapId: ObjectId
+  amount: bigint
+  coinType: string
+  recipientAddress: string
+}
+
+export interface WithdrawParams {
+  merchantCapId: ObjectId
+  amount: bigint
+  coinType: string
 }
 
 export interface SubscriptionInfo {

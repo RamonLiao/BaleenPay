@@ -1,5 +1,5 @@
 module baleenpay::router {
-    use sui::coin::{Self, Coin};
+    use sui::coin::Coin;
     use sui::balance::{Self, Balance};
     use sui::clock::Clock;
     use baleenpay::merchant::{Self, AdminCap, MerchantAccount};
@@ -18,6 +18,12 @@ module baleenpay::router {
     const ENotStableLayerMode: u64 = 25;
     #[error]
     const EZeroAmount: u64 = 10;
+    #[error]
+    const EOverflow: u64 = 23;
+    #[error]
+    const ENotMerchantOwner: u64 = 26;
+    #[error]
+    const EPaused: u64 = 27;
 
     /// Shared config object controlling payment routing strategy.
     /// AdminCap is the sole gatekeeper for all privileged operations (including keeper ops).
@@ -32,6 +38,12 @@ module baleenpay::router {
         balance: Balance<T>,
         total_deposited: u64,
         total_yield_harvested: u64,
+    }
+
+    /// Holds minted Stablecoin receipts. Merchants take from here to redeem via StableLayer.
+    public struct StablecoinVault<phantom T> has key {
+        id: UID,
+        balance: Balance<T>,
     }
 
     /// Holds reward coins from StableLayer, claimable by merchants.
@@ -86,6 +98,50 @@ module baleenpay::router {
         });
     }
 
+    public fun create_stablecoin_vault<T>(_admin: &AdminCap, ctx: &mut TxContext) {
+        transfer::share_object(StablecoinVault<T> {
+            id: object::new(ctx),
+            balance: balance::zero(),
+        });
+    }
+
+    /// Keeper deposits Stablecoin receipt into StablecoinVault and updates merchant accounting.
+    /// Called after mint in the same PTB. Moves idle_principal → farming_principal.
+    /// Amount is derived from coin.value() (single source of truth — no separate amount param).
+    public fun keeper_deposit_to_farm<T>(
+        _admin: &AdminCap,
+        account: &mut MerchantAccount,
+        stablecoin_vault: &mut StablecoinVault<T>,
+        stablecoin_coin: Coin<T>,
+    ) {
+        let amount = stablecoin_coin.value();
+        assert!(amount > 0, EZeroAmount);
+        stablecoin_vault.balance.join(stablecoin_coin.into_balance());
+        merchant::move_to_farming(account, amount);
+        events::emit_farm_deposited(
+            object::id(account),
+            amount,
+            object::id(stablecoin_vault),
+        );
+    }
+
+    /// Merchant takes Stablecoin from StablecoinVault for burning via StableLayer.
+    /// Returns Coin<T> for PTB composition with request_burn → farm::pay → fulfill_burn.
+    public fun take_stablecoin<T>(
+        cap: &merchant::MerchantCap,
+        account: &mut MerchantAccount,
+        stablecoin_vault: &mut StablecoinVault<T>,
+        amount: u64,
+        ctx: &mut TxContext,
+    ): Coin<T> {
+        assert!(amount > 0, EZeroAmount);
+        assert!(merchant::get_merchant_id(cap) == object::id(account), ENotMerchantOwner);
+        assert!(!merchant::get_paused(account), EPaused);
+        merchant::return_from_farming(account, amount);
+        events::emit_farm_redeemed(object::id(account), amount);
+        stablecoin_vault.balance.split(amount).into_coin(ctx)
+    }
+
     // ── Payment routing (package-internal) ──
 
     /// Route payment to vault. Only valid when mode == MODE_STABLELAYER.
@@ -126,6 +182,7 @@ module baleenpay::router {
         ctx: &mut TxContext,
     ): Coin<T> {
         assert!(amount > 0, EZeroAmount);
+        assert!(vault.total_deposited <= 18_446_744_073_709_551_615 - amount, EOverflow);
         vault.total_deposited = vault.total_deposited + amount;
         events::emit_vault_withdrawn(
             object::id(vault),
@@ -148,6 +205,22 @@ module baleenpay::router {
         assert!(amount > 0, EZeroAmount);
         yield_vault.balance.join(coin.into_balance());
         merchant::credit_external_yield(account, amount);
+    }
+
+    /// Merchant withdraws idle principal from Vault.
+    /// Only withdrawable amount is idle_principal (not yet sent to StableLayer by keeper).
+    public fun merchant_withdraw<T>(
+        cap: &merchant::MerchantCap,
+        account: &mut MerchantAccount,
+        vault: &mut Vault<T>,
+        amount: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert!(amount > 0, EZeroAmount);
+        merchant::deduct_idle_principal(cap, account, amount);
+        let coin = vault.balance.split(amount).into_coin(ctx);
+        transfer::public_transfer(coin, merchant::get_owner(account));
+        events::emit_merchant_withdrawn(object::id(account), object::id(vault), amount);
     }
 
     /// Claim yield v2 — withdraws actual coins from YieldVault and transfers to merchant.
@@ -175,6 +248,7 @@ module baleenpay::router {
     public fun vault_total_yield_harvested<T>(vault: &Vault<T>): u64 { vault.total_yield_harvested }
 
     public fun yield_vault_balance<T>(yv: &YieldVault<T>): u64 { yv.balance.value() }
+    public fun stablecoin_vault_balance<T>(sv: &StablecoinVault<T>): u64 { sv.balance.value() }
 
     // ── Test helpers ──
 
@@ -186,5 +260,10 @@ module baleenpay::router {
     #[test_only]
     public fun deposit_to_yield_vault_for_testing<T>(yv: &mut YieldVault<T>, coin: Coin<T>) {
         yv.balance.join(coin.into_balance());
+    }
+
+    #[test_only]
+    public fun deposit_to_stablecoin_vault_for_testing<T>(sv: &mut StablecoinVault<T>, coin: Coin<T>) {
+        sv.balance.join(coin.into_balance());
     }
 }
