@@ -6,5 +6,8 @@
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck"
+  },
+  "dependencies": {
+    "next": "^15.0.0"
   }
 }
